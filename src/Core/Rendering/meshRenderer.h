@@ -10,6 +10,7 @@
 #include "shader.h"
 #include "texture.h"
 #include "vertexBuffer.h"
+#include "../transform.h"
 
 enum MatrixType
 {
@@ -21,8 +22,8 @@ enum MatrixType
 class UV_MeshRenderer
 {
 public:
-    UV_MeshRenderer(const UV_Mesh& mesh, Shader* shader, const Texture& texture)
-        : mesh(mesh), shader(shader), texture(texture), vertexBuffer(mesh.vertices, mesh.indices)
+    UV_MeshRenderer(const UV_Mesh& mesh, Shader* shader, const Texture& texture, Transform* transform)
+        : mesh(mesh), shader(shader), texture(texture), vertexBuffer(mesh.vertices, mesh.indices), transform(transform)
     {
         if (mesh.vertices.empty() || mesh.indices.empty())
         {
@@ -30,9 +31,14 @@ public:
                 throw std::runtime_error("Mesh must have vertices and indices");
             return;
         }
+        if (!shader || !transform)
+        {
+            if (THROW_MESH_ERR)
+                throw std::runtime_error("Shader or/and Transform must be valid");
+            return;
+        }
 
         // Initialize matrices
-        modelMatrix = glm::mat4(1.0f);
         viewMatrix = glm::mat4(1.0f);
         projectionMatrix = glm::mat4(1.0f);
     }
@@ -49,7 +55,7 @@ public:
         shader->use();
 
         // Set the shader uniforms
-        shader->setMat4("model", modelMatrix);
+        shader->setMat4("model", transform->getMatrix());
         shader->setMat4("view", viewMatrix);
         shader->setMat4("projection", projectionMatrix);
 
@@ -67,7 +73,7 @@ public:
         switch (type)
         {
         case MODEL:
-            modelMatrix = matrix;
+            transform->setMatrix(matrix);
             break;
         case VIEW:
             viewMatrix = matrix;
@@ -85,7 +91,7 @@ public:
         switch (type)
         {
         case MODEL:
-            matrix = modelMatrix;
+            matrix = transform->getMatrix();
             break;
         case VIEW:
             matrix = viewMatrix;
@@ -99,7 +105,8 @@ public:
     }
 
 private:
-    glm::mat4 modelMatrix;
+    // glm::mat4 modelMatrix;
+    Transform* transform;
     glm::mat4 viewMatrix;
     glm::mat4 projectionMatrix;
 

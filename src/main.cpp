@@ -8,9 +8,10 @@
 // #define STB_IMAGE_IMPLEMENTATION
 // #include <stb_image.h>
 
-#include "rendering/meshRenderer.h"
-#include "rendering/mesh.h"
-#include "rendering/shader.h"
+#include "Core/Rendering/meshRenderer.h"
+#include "Core/Rendering/mesh.h"
+#include "Core/Rendering/shader.h"
+#include "core/transform.h"
 #include "camera.h"
 
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
@@ -141,11 +142,18 @@ int main() {
     // Create shader program
     Shader shader("resources/shaders/vertex_texture.glsl", "resources/shaders/fragment_texture.glsl");
 	UV_Mesh mesh = Meshes::cube;
-	Texture texture0("resources/textures/container.jpg", GL_TEXTURE0);
-    Texture texture1("resources/textures/container.jpg", GL_TEXTURE1);
+    UV_Mesh blockMesh = Meshes::block;
 
-    UV_MeshRenderer meshRenderer0(mesh, &shader, texture0);
-    UV_MeshRenderer meshRenderer1(mesh, &shader, texture1);
+	Texture texture0("resources/textures/container.jpg", GL_TEXTURE0);
+    Texture texture1("resources/textures/block_sample_jpeg.jpg", GL_TEXTURE1);
+
+    Transform transform0;
+    Transform transform1;
+    transform1.setScale(glm::vec3(0.5f, 1.0f, 0.5f));
+    transform1.setPosition(glm::vec3(1.0f, 1.0f, 0.0f));
+
+    UV_MeshRenderer meshRenderer0(mesh, &shader, texture0, &transform0);
+    UV_MeshRenderer meshRenderer1(blockMesh, &shader, texture1, &transform1);
 
 
     /*
@@ -230,19 +238,25 @@ int main() {
 
         glm::mat4 projection = glm::perspective(glm::radians(camera.Zoom), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 100.0f);
         glm::mat4 view = camera.GetViewMatrix();
+
+        float angle = glm::radians(50.0f) * deltaTime; // 50 degrees per second
+        transform1.setRotation(transform1.getRotation() * glm::quat(glm::vec3(0.0f, angle, 0.0f)));
+
+        /*
         glm::mat4 model0 = glm::mat4(1.0f);
         model0 = glm::translate(model0, cubePositions[0]);
         glm::mat4 model1 = glm::mat4(1.0f);
         model1 = glm::translate(model1, cubePositions[1]);
+        */
 
-
-		meshRenderer0.setMatrix(MODEL, model0);
-		meshRenderer0.setMatrix(VIEW, view);
+        meshRenderer0.setMatrix(VIEW, view);
+        meshRenderer1.setMatrix(VIEW, view);
 		meshRenderer0.setMatrix(PROJECTION, projection);
+        meshRenderer1.setMatrix(PROJECTION, projection);
 
-        meshRenderer1.setMatrix(MODEL, model1);
-		meshRenderer1.setMatrix(VIEW, view);
-		meshRenderer1.setMatrix(PROJECTION, projection);
+
+		// meshRenderer0.setMatrix(MODEL, model0);
+        // meshRenderer1.setMatrix(MODEL, model1);
 		meshRenderer1.render();
         meshRenderer0.render();
 
