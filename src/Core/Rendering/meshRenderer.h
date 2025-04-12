@@ -11,6 +11,7 @@
 #include "texture.h"
 #include "vertexBuffer.h"
 #include "../transform.h"
+#include "vertex.h"
 
 enum MatrixType
 {
@@ -102,6 +103,21 @@ public:
         default:
             break;
         }
+    }
+
+    std::vector<glm::vec3> getTransformedVertices()
+    {
+        std::vector<glm::vec3> transformedVertices;
+        glm::mat4 modelMatrix = transform->getMatrix();
+
+        for (const auto& vertex : mesh.vertices)
+        {
+            // Assuming vertex.position is a glm::vec3
+            glm::vec4 transformed = modelMatrix * glm::vec4(getVertexPosition(vertex), 1.0f);
+            transformedVertices.push_back(glm::vec3(transformed));
+        }
+
+        return transformedVertices;
     }
 
 private:
