@@ -76,6 +76,17 @@ public:
     {
         glUseProgram(ID);
     }
+
+    void isActive() const
+    {
+        GLint currentProgram;
+        glGetIntegerv(GL_CURRENT_PROGRAM, &currentProgram);
+        if (currentProgram != ID)
+        {
+            std::cout << "Shader is not active!" << std::endl;
+        }
+    }
+
     // utility uniform functions
     // ------------------------------------------------------------------------
     void setBool(const std::string& name, bool value) const

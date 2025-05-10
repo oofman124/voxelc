@@ -12,6 +12,7 @@
 #include "vertexBuffer.h"
 #include "../transform.h"
 #include "vertex.h"
+#include <memory>
 
 enum MatrixType
 {
@@ -19,12 +20,23 @@ enum MatrixType
     VIEW,
     PROJECTION
 };
+// MeshRendererMode enum to define the rendering mode of the mesh, used in the main renderer for now.
+enum MeshRendererMode
+{
+    // Default mode for 3D rendering
+    MESH_RENDERER_MODE_DEFAULT,
+    // 2D mode for rendering in 2D space (This mode may not be fully implemented yet)
+    MESH_RENDERER_MODE_2D,
+    // Disabled
+    MESH_RENDERER_MODE_DISABLED
+};
 
-class UV_MeshRenderer
+class UV_MeshRenderer : public std::enable_shared_from_this<UV_MeshRenderer>
 {
 public:
-    UV_MeshRenderer(const UV_Mesh& mesh, Shader* shader, const Texture& texture, Transform* transform)
-        : mesh(mesh), shader(shader), texture(texture), vertexBuffer(mesh.vertices, mesh.indices), transform(transform)
+    UV_MeshRenderer(const UV_Mesh &mesh, Shader *shader, Texture* texture, Transform *transform, MeshRendererMode mode = MESH_RENDERER_MODE_DEFAULT)
+        : mesh(new UV_Mesh(mesh)), shader(shader), texture(texture),
+          transform(transform), mode(mode)
     {
         if (mesh.vertices.empty() || mesh.indices.empty())
         {
@@ -39,37 +51,81 @@ public:
             return;
         }
 
+        // Initialize vertex buffer
+        vertexBuffer = new UV_VertexBuffer(mesh.vertices, mesh.indices);
+
         // Initialize matrices
         viewMatrix = glm::mat4(1.0f);
         projectionMatrix = glm::mat4(1.0f);
+        isInitialized = true;
+    }
+
+    // Default constructor
+    UV_MeshRenderer(Transform *transform)
+        : shader(nullptr), mesh(nullptr), texture(nullptr), vertexBuffer(nullptr),
+          transform(transform), mode(MESH_RENDERER_MODE_DEFAULT)
+    {
+        // Initialize matrices
+        viewMatrix = glm::mat4(1.0f);
+        projectionMatrix = glm::mat4(1.0f);
+    }
+    // Initialize method for setting up after default construction
+    bool Initialize(Transform *transform, const UV_Mesh &mesh, Shader *shader, Texture* texture, MeshRendererMode mode = MESH_RENDERER_MODE_DEFAULT)
+    {
+        if (mesh.vertices.empty() || mesh.indices.empty())
+        {
+            if (THROW_MESH_ERR)
+                throw std::runtime_error("Mesh must have vertices and indices");
+            return false;
+        }
+        if (!shader || !transform)
+        {
+            if (THROW_MESH_ERR)
+                throw std::runtime_error("Shader or/and Transform must be valid");
+            return false;
+        }
+
+        this->mode = mode;
+        this->mesh = new UV_Mesh(mesh);
+        this->shader = shader;
+        this->texture = texture;
+        this->transform = transform;
+        this->vertexBuffer = new UV_VertexBuffer(mesh.vertices, mesh.indices);
+        isInitialized = true;
+        return true;
+    }
+
+    bool getReady() const
+    {
+        return isInitialized;
     }
 
     ~UV_MeshRenderer()
     {
         // Clean up
-        vertexBuffer.~UV_VertexBuffer();
+        delete vertexBuffer;
+        delete mesh;
     }
 
-    void render()
-    {
-        // Use the shader
+    void render() {
+        if (!isInitialized || !mesh || !texture || !vertexBuffer)
+            return;
+            
         shader->use();
-
-        // Set the shader uniforms
         shader->setMat4("model", transform->getMatrix());
         shader->setMat4("view", viewMatrix);
         shader->setMat4("projection", projectionMatrix);
 
-        // Bind the texture
-        texture.bindToShaderInt(*shader, "texture0");
+        texture->bindToShaderInt(*shader, "texture0");
 
-        // Bind the vertex buffer and draw the mesh
-        vertexBuffer.bind();
-        glDrawElements(GL_TRIANGLES, mesh.indices.size(), GL_UNSIGNED_INT, 0);
-        vertexBuffer.unbind();
+        vertexBuffer->bind();
+        glDrawElements(GL_TRIANGLES, mesh->indices.size(), GL_UNSIGNED_INT, 0);
+        vertexBuffer->unbind();
+
+        texture->unbind(); // DON'T forget this
     }
 
-    void setMatrix(MatrixType type, const glm::mat4& matrix)
+    void setMatrix(MatrixType type, const glm::mat4 &matrix)
     {
         switch (type)
         {
@@ -87,7 +143,7 @@ public:
         }
     }
 
-    void getMatrix(MatrixType type, glm::mat4& matrix)
+    void getMatrix(MatrixType type, glm::mat4 &matrix)
     {
         switch (type)
         {
@@ -107,10 +163,12 @@ public:
 
     std::vector<glm::vec3> getTransformedVertices()
     {
+        if (!isInitialized)
+            return {};
         std::vector<glm::vec3> transformedVertices;
         glm::mat4 modelMatrix = transform->getMatrix();
 
-        for (const auto& vertex : mesh.vertices)
+        for (const auto &vertex : mesh->vertices)
         {
             // Assuming vertex.position is a glm::vec3
             glm::vec4 transformed = modelMatrix * glm::vec4(getVertexPosition(vertex), 1.0f);
@@ -119,17 +177,70 @@ public:
 
         return transformedVertices;
     }
+    void setShader(Shader *shader)
+    {
+        this->shader = shader;
+    }
+    Shader *getShader()
+    {
+        return shader;
+    }
+    void setTexture(Texture* newTexture)
+    {
+        // delete texture;
+        texture = newTexture;
+    }
+    Texture *getTexture()
+    {
+        return texture;
+    }
+    void setMesh(const UV_Mesh& newMesh) {
+        if (isInitialized) {
+            delete mesh;
+            mesh = new UV_Mesh(newMesh);
+            
+            // Update vertex buffer
+            if (vertexBuffer) {
+                vertexBuffer->updateVertices(newMesh.vertices);
+                vertexBuffer->updateIndices(newMesh.indices);
+            } else {
+                vertexBuffer = new UV_VertexBuffer(newMesh.vertices, newMesh.indices);
+            }
+        }
+    }
+
+    UV_Mesh *getMesh()
+    {
+        return mesh;
+    }
+    void setMode(MeshRendererMode mode)
+    {
+        this->mode = mode;
+    }
+    MeshRendererMode getMode()
+    {
+        return mode;
+    }
+    void setTransform(Transform *transform)
+    {
+        this->transform = transform;
+    }
+    Transform *getTransform()
+    {
+        return transform;
+    }
 
 private:
-    // glm::mat4 modelMatrix;
-    Transform* transform;
+    Transform *transform;
     glm::mat4 viewMatrix;
     glm::mat4 projectionMatrix;
 
-    UV_Mesh mesh;
-    Texture texture;
-    UV_VertexBuffer vertexBuffer;
-    Shader* shader;
+    bool isInitialized = false;
+    MeshRendererMode mode;
+    UV_Mesh *mesh;    // Changed to pointer
+    Texture *texture; // Changed to pointer
+    UV_VertexBuffer* vertexBuffer;
+    Shader *shader;
 };
 
 #endif // MESH_RENDERER_H

@@ -44,6 +44,13 @@ public:
         glDeleteBuffers(1, &VBO);
         glDeleteBuffers(1, &EBO);
     }
+    bool isActive() const
+    {
+        GLint currentVAO;
+        glGetIntegerv(GL_VERTEX_ARRAY_BINDING, &currentVAO);
+        return currentVAO == VAO;
+    }
+
     void bind() const
     {
         glBindVertexArray(VAO);
@@ -51,7 +58,8 @@ public:
 
     void unbind() const
     {
-        glBindVertexArray(0);
+        if (isActive())
+            glBindVertexArray(0);
     }
 
     void updateVertices(const std::vector<UV_Vertex>& vertices)

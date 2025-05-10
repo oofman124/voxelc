@@ -4,19 +4,25 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/quaternion.hpp>
 #include <glm/gtc/matrix_transform.hpp>
+#include <memory>
 
-class Transform {
+class Transform : public std::enable_shared_from_this<Transform> {
 public:
-    Transform() {
-        position = glm::vec3(0.0f);
-        rotation = glm::quat(1.0f, 0.0f, 0.0f, 0.0f);
-        scale = glm::vec3(1.0f);
-        matrixNeedsUpdate = true;
-    };
     Transform(const glm::vec3& position, const glm::quat& rotation, const glm::vec3& scale) {
         this->position = position;
         this->rotation = rotation;
         this->scale = scale;
+        matrixNeedsUpdate = true;
+    };
+    Transform(const glm::mat4& matrix) {
+        this->matrix = matrix;
+        matrixNeedsUpdate = false;
+        decomposeMatrix();
+    };
+    Transform() {
+        position = glm::vec3(0.0f, 0.0f, 0.0f);
+        rotation = glm::quat(1.0f, 0.0f, 0.0f, 0.0f);
+        scale = glm::vec3(1.0f, 1.0f, 1.0f);
         matrixNeedsUpdate = true;
     };
     void decomposeMatrix() {
@@ -81,7 +87,6 @@ private:
         matrix = glm::scale(matrix, scale);
         matrixNeedsUpdate = false;
     };
-
     glm::vec3 position;
     glm::quat rotation;
     glm::vec3 scale;

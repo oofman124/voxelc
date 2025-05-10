@@ -10,5 +10,8 @@ uniform float normalStrength = 0.2;
 void main()
 {
     // FragColor = mix(texture(texture0, TexCoord), texture(normalMap, TexCoord), normalStrength);
-    FragColor = texture(texture0, TexCoord);
+    vec4 texColor = texture(texture0, TexCoord);
+    if(texColor.a < 0.1)
+        discard;
+    FragColor = texColor;
 }
