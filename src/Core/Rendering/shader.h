@@ -76,6 +76,10 @@ public:
     {
         glUseProgram(ID);
     }
+    void unuse() const
+    {
+        glUseProgram(0);
+    }
 
     void isActive() const
     {

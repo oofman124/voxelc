@@ -6,9 +6,9 @@
 #include <glm/gtc/type_ptr.hpp>
 #include <memory>
 #include <thread>
-#include "imgui.h"
-#include "imgui_impl_glfw.h"
-#include "imgui_impl_opengl3.h"
+// #include "imgui.h"
+// #include "imgui_impl_glfw.h"
+// #include "imgui_impl_opengl3.h"
 
 // #define STB_IMAGE_IMPLEMENTATION
 // #include <stb_image.h>
@@ -20,9 +20,11 @@
 #include "Core/instance.h"
 #include "camera.h"
 #include "World/world.h"
-#include "Core/Rendering/frustrum.h"
+#include "Core/Math/frustrum.h"
 #include "Core/assets.h"
 #include "World/chunk.h"
+#include "Core/UI/uiRenderer.h"
+#include "Core/UI/uiRect.h"
 
 static AssetManager &assetMgr = AssetManager::getInstance();
 void framebuffer_size_callback(GLFWwindow *window, int width, int height);
@@ -34,6 +36,9 @@ void processInput(GLFWwindow *window);
 const unsigned int SCR_WIDTH = 800;
 const unsigned int SCR_HEIGHT = 600;
 const unsigned int RENDER_DISTANCE = 20;
+// UI Renderer
+std::shared_ptr<UIRenderer> uiRenderer = nullptr;
+
 // timing
 float deltaTime = 0.0f; // time between current frame and last frame
 float lastFrame = 0.0f;
@@ -46,18 +51,96 @@ Frustum viewFrustum;
 
 bool mouseLocked = true;
 
-glm::vec3 cubePositions[] = {
-    glm::vec3(0.0f, 0.0f, 0.0f),
-    glm::vec3(2.0f, 5.0f, -15.0f),
-    glm::vec3(-1.5f, -2.2f, -2.5f),
-    glm::vec3(-3.8f, -2.0f, -12.3f),
-    glm::vec3(2.4f, -0.4f, -3.5f),
-    glm::vec3(-1.7f, 3.0f, -7.5f),
-    glm::vec3(1.3f, -2.0f, -2.5f),
-    glm::vec3(1.5f, 2.0f, -2.5f),
-    glm::vec3(1.5f, 0.2f, -1.5f),
-    glm::vec3(-1.3f, 1.0f, -1.5f)
-};
+void APIENTRY debugMessage(GLenum source, GLenum type, GLuint id, GLenum severity, GLsizei length, const GLchar *message, const void *userParam)
+{
+    // Some debug messages are just annoying informational messages
+    switch (id)
+    {
+    case 131185: // glBufferData
+        return;
+    }
+
+    printf("Message: %s\n", message);
+    printf("Source: ");
+
+    switch (source)
+    {
+    case GL_DEBUG_SOURCE_API:
+        printf("API");
+        break;
+    case GL_DEBUG_SOURCE_WINDOW_SYSTEM:
+        printf("Window System");
+        break;
+    case GL_DEBUG_SOURCE_SHADER_COMPILER:
+        printf("Shader Compiler");
+        break;
+    case GL_DEBUG_SOURCE_THIRD_PARTY:
+        printf("Third Party");
+        break;
+    case GL_DEBUG_SOURCE_APPLICATION:
+        printf("Application");
+        break;
+    case GL_DEBUG_SOURCE_OTHER:
+        printf("Other");
+        break;
+    }
+
+    printf("\n");
+    printf("Type: ");
+
+    switch (type)
+    {
+    case GL_DEBUG_TYPE_ERROR:
+        printf("Error");
+        break;
+    case GL_DEBUG_TYPE_DEPRECATED_BEHAVIOR:
+        printf("Deprecated Behavior");
+        break;
+    case GL_DEBUG_TYPE_UNDEFINED_BEHAVIOR:
+        printf("Undefined Behavior");
+        break;
+    case GL_DEBUG_TYPE_PORTABILITY:
+        printf("Portability");
+        break;
+    case GL_DEBUG_TYPE_PERFORMANCE:
+        printf("Performance");
+        break;
+    case GL_DEBUG_TYPE_MARKER:
+        printf("Marker");
+        break;
+    case GL_DEBUG_TYPE_PUSH_GROUP:
+        printf("Push Group");
+        break;
+    case GL_DEBUG_TYPE_POP_GROUP:
+        printf("Pop Group");
+        break;
+    case GL_DEBUG_TYPE_OTHER:
+        printf("Other");
+        break;
+    }
+
+    printf("\n");
+    printf("ID: %d\n", id);
+    printf("Severity: ");
+
+    switch (severity)
+    {
+    case GL_DEBUG_SEVERITY_HIGH:
+        printf("High");
+        break;
+    case GL_DEBUG_SEVERITY_MEDIUM:
+        printf("Medium");
+        break;
+    case GL_DEBUG_SEVERITY_LOW:
+        printf("Low");
+        break;
+    case GL_DEBUG_SEVERITY_NOTIFICATION:
+        printf("Notification");
+        break;
+    }
+
+    printf("\n\n");
+}
 
 // Initialize GLFW and GLAD, then create window
 GLFWwindow *initGLFW()
@@ -67,9 +150,13 @@ GLFWwindow *initGLFW()
         std::cerr << "GLFW initialization failed!" << std::endl;
         exit(-1);
     }
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+    #ifdef _DEBUG
+        glfwWindowHint(GLFW_OPENGL_DEBUG_CONTEXT, GL_TRUE);
+    #endif
+
     GLFWwindow *window = glfwCreateWindow(SCR_WIDTH, SCR_HEIGHT, "voxelc", NULL, NULL);
     if (!window)
     {
@@ -85,7 +172,7 @@ GLFWwindow *initGLFW()
     // tell GLFW to capture our mouse
     glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 
-    // Setup Dear ImGui context
+    /* Setup Dear ImGui context
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
     ImGuiIO &io = ImGui::GetIO();
@@ -96,6 +183,7 @@ GLFWwindow *initGLFW()
     // Setup Platform/Renderer backends
     ImGui_ImplGlfw_InitForOpenGL(window, true); // Second param install_callback=true will install GLFW callbacks and chain to existing ones.
     ImGui_ImplOpenGL3_Init();
+    */
 
     return window;
 }
@@ -112,6 +200,16 @@ int main()
         glfwTerminate();
         return -1;
     }
+
+    // Now that GLAD is initialized, we can setup debug output
+    #ifdef _DEBUG
+        if (glfwExtensionSupported("GL_ARB_debug_output")) {
+            glEnable(GL_DEBUG_OUTPUT);
+            glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS);
+            glDebugMessageCallback(debugMessage, nullptr);
+            glDebugMessageControl(GL_DONT_CARE, GL_DONT_CARE, GL_DONT_CARE, 0, nullptr, GL_TRUE);
+        }
+    #endif
 
     // Set up OpenGL options
     glEnable(GL_DEPTH_TEST);
@@ -136,25 +234,24 @@ int main()
     */
     assetMgr.initializeDefaultAssets();
 
+    // Initialize UI Renderer
+    uiRenderer = std::make_shared<UIRenderer>(SCR_WIDTH, SCR_HEIGHT);
+
     std::shared_ptr<Texture> texture0 = assetMgr.getTexture("grass");
     std::shared_ptr<Texture> texture1 = assetMgr.addTexture("block", "resources/textures/block_sample.png");
     // Shader shader("resources/shaders/vertex_texture.glsl", "resources/shaders/fragment_texture.glsl");
-    std::shared_ptr<Shader> shader = assetMgr.getShader("default");
-    World world;
-    world.generateTerrain(3,3);
-    auto root = world.getRoot();
+    // std::shared_ptr<Shader> shader = assetMgr.getShader("default");
+    // World world;
+    // world.generateTerrain(3, 3);
+    // auto root = world.getRoot();
 
-    auto obj = make_shared<PVInstance>("Block" + std::to_string(12));
-    obj->SetParent(root);
-    if (auto transform = obj->transform.lock())
-    {
-        obj->transform.lock()->setPosition(glm::vec3(0.0f));
-        obj->transform.lock()->setScale(glm::vec3(34.5f, 34.0f, 34.5f));
-    }
-    if (auto meshRenderer = obj->meshRenderer.lock())
-    {
-        meshRenderer->Initialize(obj->transformPtr.get(), Meshes::block, shader.get(), texture1.get(), MESH_RENDERER_MODE_2D);
-    }
+    // Create a colored rectangle
+    // When creating colorRect
+    auto colorRect = std::make_unique<UIRect>();
+    colorRect->setPosition({10.0f, (float)SCR_HEIGHT - 60.0f}); // Adjust Y to start from top
+    colorRect->setSize({100.0f, 50.0f});
+    colorRect->setColor({1.0f, 0.0f, 0.0f, 1.0f}); // Red with full alpha
+    // colorRect->setTexture(texture0);
 
     // Limit to 60 FPS
     const double frameTime = 1.0 / 60.0;
@@ -192,7 +289,7 @@ int main()
         if ((lastStepTime - currentTime) < stepTime)
         {
             lastStepTime = glfwGetTime();
-            hierarchyMap = root->exportToMap();
+            // hierarchyMap = root->exportToMap();
         }
         lastFrameTime = currentTime;
 
@@ -200,16 +297,18 @@ int main()
         // -----
         processInput(window);
 
-        // Start the Dear ImGui frame
+        /* Start the Dear ImGui frame
         ImGui_ImplOpenGL3_NewFrame();
         ImGui_ImplGlfw_NewFrame();
         ImGui::NewFrame();
+        */
 
+        /*
         if (ImGui::BeginMainMenuBar())
         {
             if (ImGui::BeginMenu("File"))
             {
-                if (ImGui::MenuItem("Quit", "Ctrl+Q"))
+                if (ImGui::MenuItem("Quit", "Alt+Q"))
                 {
                     glfwSetWindowShouldClose(window, true);
                 }
@@ -225,7 +324,7 @@ int main()
             }
             if (mouseLocked)
             {
-                if (ImGui::MenuItem("Toggle Mouse Lock (Ctrl+M)", "Ctrl+M", false, !mouseLocked))
+                if (ImGui::MenuItem("Toggle Mouse Lock (Alt+M)", "Alt+M", false))
                 {
                     mouseLocked = !mouseLocked;
                     glfwSetInputMode(window, GLFW_CURSOR, mouseLocked ? GLFW_CURSOR_DISABLED : GLFW_CURSOR_NORMAL);
@@ -282,6 +381,7 @@ int main()
 
             ImGui::End();
         }
+        */
 
         // render
         glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
@@ -289,22 +389,11 @@ int main()
 
         glm::mat4 projection = glm::perspective(glm::radians(camera.Zoom), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 100.0f);
         glm::mat4 view = camera.GetViewMatrix();
-        glm::mat4 projection_2d = glm::ortho(
-            0.0f,              // Left (0 pixels)
-            (float)SCR_WIDTH,  // Right (screen width in pixels)
-            0.0f,              // Bottom (0 pixels)
-            (float)SCR_HEIGHT, // Top (screen height in pixels)
-            -1.0f,             // Near
-            1.0f               // Far
-        );
-        glm::mat4 view_2d = glm::lookAt(glm::vec3(0.0f, 0.0f, 1.0f),
-                                        glm::vec3(0.0f, 0.0f, 0.0f),
-                                        glm::vec3(0.0f, 1.0f, 0.0f));
 
         glm::mat4 projView = projection * view;
         // viewFrustum.update(projView);
 
-        // Find any descendants of the root instance that is a PVInstance and render them
+        /* Find any descendants of the root instance that is a PVInstance and render them
         for (const auto &child : root->GetChildren())
         {
             auto chunk = std::dynamic_pointer_cast<Chunk>(child);
@@ -313,7 +402,7 @@ int main()
                 glm::vec3 position = chunk->getPosition();
                 // float squaredDistance = glm::dot(position - camera.Position, position - camera.Position);
                 float distanceMag = glm::length(position - camera.Position);
-                if (true /* distanceMag <= RENDER_DISTANCE */ /*squaredDistance < RENDER_DISTANCE * RENDER_DISTANCE*/)
+                if (distanceMag <= RENDER_DISTANCE squaredDistance < RENDER_DISTANCE * RENDER_DISTANCE)
                 {
                     for (const auto &blk : chunk->GetChildren())
                     {
@@ -329,40 +418,55 @@ int main()
                                     meshRenderer->setMatrix(VIEW, view);
                                     meshRenderer->setMatrix(PROJECTION, projection);
                                 }
-                                /* Not needed
-                                else if (meshRenderer->getMode() == MESH_RENDERER_MODE_2D)
-                                {
-                                    glm::vec3 pos = transform->getPosition();
-                                    transform->setPosition(glm::vec3(pos.x, pos.y, 0.0f));
-                                    meshRenderer->setMatrix(VIEW, view_2d);
-                                    meshRenderer->setMatrix(PROJECTION, projection_2d);
-                                }
-                                */
                                 meshRenderer->render();
                             }
                         }
                     }
                 }
             }
+            */
 
-            /*
-            auto pvInstance = std::dynamic_pointer_cast<PVInstance>(child);
+        /*
+        auto pvInstance = std::dynamic_pointer_cast<PVInstance>(child);
 
-            if (pvInstance)
+        if (pvInstance)
+        {
+            auto transform = pvInstance->transform.lock();
+            if (!transform)
+                continue;
+
+            /* disabled for now
+            // Check if object is in view frustum
+            glm::vec3 position = transform->getPosition();
+            float radius = glm::length(transform->getScale()) * 2.0f; // Approximate bounding sphere
+
+            if (!viewFrustum.isInFrustum(position, radius))
             {
-                auto transform = pvInstance->transform.lock();
-                if (!transform)
-                    continue;
-
-                /* disabled for now
-                // Check if object is in view frustum
-                glm::vec3 position = transform->getPosition();
-                float radius = glm::length(transform->getScale()) * 2.0f; // Approximate bounding sphere
-
-                if (!viewFrustum.isInFrustum(position, radius))
+                continue; // Skip rendering if not in frustum
+            }
+            auto meshRenderer = pvInstance->meshRenderer.lock();
+            if (meshRenderer)
+            {
+                if (meshRenderer->getMode() == MESH_RENDERER_MODE_DEFAULT)
                 {
-                    continue; // Skip rendering if not in frustum
+                    meshRenderer->setMatrix(VIEW, view);
+                    meshRenderer->setMatrix(PROJECTION, projection);
                 }
+                else if (meshRenderer->getMode() == MESH_RENDERER_MODE_2D)
+                {
+                    glm::vec3 pos = transform->getPosition();
+                    transform->setPosition(glm::vec3(pos.x, pos.y, 0.0f));
+                    meshRenderer->setMatrix(VIEW, view_2d);
+                    meshRenderer->setMatrix(PROJECTION, projection_2d);
+                }
+                meshRenderer->render();
+            }
+
+
+            // Render distance limit
+            float squaredDistance = glm::dot(transform->getPosition() - camera.Position, transform->getPosition() - camera.Position);
+            if (squaredDistance < RENDER_DISTANCE * RENDER_DISTANCE)
+            {
                 auto meshRenderer = pvInstance->meshRenderer.lock();
                 if (meshRenderer)
                 {
@@ -380,36 +484,17 @@ int main()
                     }
                     meshRenderer->render();
                 }
-
-
-                // Render distance limit
-                float squaredDistance = glm::dot(transform->getPosition() - camera.Position, transform->getPosition() - camera.Position);
-                if (squaredDistance < RENDER_DISTANCE * RENDER_DISTANCE)
-                {
-                    auto meshRenderer = pvInstance->meshRenderer.lock();
-                    if (meshRenderer)
-                    {
-                        if (meshRenderer->getMode() == MESH_RENDERER_MODE_DEFAULT)
-                        {
-                            meshRenderer->setMatrix(VIEW, view);
-                            meshRenderer->setMatrix(PROJECTION, projection);
-                        }
-                        else if (meshRenderer->getMode() == MESH_RENDERER_MODE_2D)
-                        {
-                            glm::vec3 pos = transform->getPosition();
-                            transform->setPosition(glm::vec3(pos.x, pos.y, 0.0f));
-                            meshRenderer->setMatrix(VIEW, view_2d);
-                            meshRenderer->setMatrix(PROJECTION, projection_2d);
-                        }
-                        meshRenderer->render();
-                    }
-                }
             }
-         */
         }
-
-        ImGui::Render();
-        ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+     */
+        //}
+        glDisable(GL_DEPTH_TEST);
+        uiRenderer->begin();
+        uiRenderer->submit(colorRect.get());
+        uiRenderer->flush();
+        glEnable(GL_DEPTH_TEST);
+        // ImGui::Render();
+        // ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 
         glfwSwapBuffers(window);
         glfwPollEvents();
@@ -424,10 +509,10 @@ int main()
     // cleanup
     try
     {
-        ImGui_ImplOpenGL3_Shutdown();
-        ImGui_ImplGlfw_Shutdown();
-        ImGui::DestroyContext();
-        root.reset(); // This will also delete all children instances and their resources
+        // ImGui_ImplOpenGL3_Shutdown();
+        // ImGui_ImplGlfw_Shutdown();
+        // ImGui::DestroyContext();
+        // root.reset(); // This will also delete all children instances and their resources
     }
     catch (const std::exception &e)
     {
@@ -443,7 +528,8 @@ int main()
 void processInput(GLFWwindow *window)
 {
     if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
-        //glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
+        mouseLocked = !mouseLocked;
+    glfwSetInputMode(window, GLFW_CURSOR, mouseLocked ? GLFW_CURSOR_DISABLED : GLFW_CURSOR_NORMAL);
     if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
         camera.ProcessKeyboard(FORWARD, deltaTime);
     if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
@@ -461,6 +547,8 @@ void framebuffer_size_callback(GLFWwindow *window, int width, int height)
     // make sure the viewport matches the new window dimensions; note that width and
     // height will be significantly larger than specified on retina displays.
     glViewport(0, 0, width, height);
+    if (uiRenderer)
+        uiRenderer->SetProjection(width, height);
 }
 // glfw: whenever the mouse moves, this callback is called
 // -------------------------------------------------------

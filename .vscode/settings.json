@@ -68,7 +68,10 @@
         "numeric": "cpp",
         "random": "cpp",
         "set": "cpp",
-        "xtree": "cpp"
+        "xtree": "cpp",
+        "map": "cpp",
+        "stop_token": "cpp",
+        "thread": "cpp"
     },
     "github.copilot.enable": {
         "*": true,

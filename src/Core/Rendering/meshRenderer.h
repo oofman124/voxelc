@@ -25,8 +25,6 @@ enum MeshRendererMode
 {
     // Default mode for 3D rendering
     MESH_RENDERER_MODE_DEFAULT,
-    // 2D mode for rendering in 2D space (This mode may not be fully implemented yet)
-    MESH_RENDERER_MODE_2D,
     // Disabled
     MESH_RENDERER_MODE_DISABLED
 };

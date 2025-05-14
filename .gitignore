@@ -1,4 +1,4 @@
 /.vs
-/CMakePresets.json
 /archives
 /out
+/.vscode

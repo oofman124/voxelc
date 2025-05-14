@@ -99,11 +99,16 @@ public:
     // Bind to shader with automatic unit handling
     void bindToShaderInt(Shader &shader, const std::string &name) const {
         shader.use();
-        bind();
+        if (!isBound())
+            bind();
         int value = unit - GL_TEXTURE0;
         shader.setInt(name, value);
     }
     GLenum getUnit() const { return unit; }
+
+    bool operator==(const Texture& other) const {
+        return textureID == other.textureID;
+    }
 
     // Unbind the texture
     void unbind() const {

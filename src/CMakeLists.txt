@@ -21,7 +21,7 @@ if (WIN32)
         PRIVATE
         "${GLFW_ROOT}/lib/glfw3.lib"  # Link GLFW
         opengl32                       # Link OpenGL
-        imgui                          # Link ImGui
+        # imgui                          # Link ImGui
     )
 else()
     message(FATAL_ERROR "Unsupported platform. Linux and MacOS support coming soon!")

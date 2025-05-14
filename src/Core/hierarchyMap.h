@@ -5,7 +5,7 @@
 #include <string>
 #include <memory>
 #include <sstream>
-#include "imgui.h"
+// #include "imgui.h"
 
 template<typename K, typename V>
 class HierarchyMap {
@@ -30,7 +30,7 @@ public:
             map[childKey] = childNode;
         }
     }
-
+    /*
     void renderImGuiTree(const K& rootKey) const {
         auto it = map.find(rootKey);
         if (it != map.end()) {
@@ -60,6 +60,7 @@ public:
             }
         }
     }
+    */
 
     std::shared_ptr<Value> getSelected() const {
         for (const auto& pair : map) {
