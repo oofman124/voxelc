@@ -30,37 +30,7 @@ public:
             map[childKey] = childNode;
         }
     }
-    /*
-    void renderImGuiTree(const K& rootKey) const {
-        auto it = map.find(rootKey);
-        if (it != map.end()) {
-            ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_OpenOnArrow;
-            if (it->second->children.empty()) {
-                flags |= ImGuiTreeNodeFlags_Leaf;
-            }
-            if (it->second->selected) {
-                flags |= ImGuiTreeNodeFlags_Selected;
-            }
-
-            bool opened = ImGui::TreeNodeEx((rootKey + ": " + it->second->data).c_str(), flags);
-            
-            if (ImGui::IsItemClicked()) {
-                // Deselect all
-                for (auto& pair : map) {
-                    pair.second->selected = false;
-                }
-                it->second->selected = true;
-            }
-
-            if (opened) {
-                for (const auto& child : it->second->children) {
-                    renderImGuiTree(child.first);
-                }
-                ImGui::TreePop();
-            }
-        }
-    }
-    */
+   
 
     std::shared_ptr<Value> getSelected() const {
         for (const auto& pair : map) {

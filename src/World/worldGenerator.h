@@ -4,7 +4,7 @@
 #include <memory>
 #include <glm/glm.hpp>
 #include <cmath>
-#include "../Core/instance.h"
+#include "../Core/object.h"
 #include "../Core/assets.h"
 #include "chunk.h"
 #include "perlinNoise.h"
@@ -53,7 +53,7 @@ public:
         return std::round((total / maxValue) * this->amplitude);
     }
 
-    void generateChunk(shared_ptr<Instance> parent, int startX, int startZ, int width, int depth)
+    void generateChunk(shared_ptr<Object> parent, int startX, int startZ, int width, int depth)
     {
         auto chunk = make_shared<Chunk>("Chunk_" + to_string(startX) + "_" + to_string(startZ));
         chunk->SetParent(parent);
@@ -82,9 +82,9 @@ private:
     float scale;        // Scale of the noise
     float amplitude;    // Height multiplier
 
-    void createBlock(shared_ptr<Instance> parent, int x, int z, float height)
+    void createBlock(shared_ptr<Object> parent, int x, int z, float height)
     {
-        auto block = make_shared<PVInstance>("Block_" + to_string(x) + "_" + to_string(z));
+        auto block = make_shared<PVObject>("Block_" + to_string(x) + "_" + to_string(z));
         block->SetParent(parent);
 
         if (auto transform = block->transform.lock())
@@ -96,10 +96,10 @@ private:
         if (auto meshRenderer = block->meshRenderer.lock())
         {
             meshRenderer->Initialize(
-                block->transformPtr.get(),
+                block->transformPtr,
                 Meshes::cube,
-                assetMgr.getShader("default").get(),
-                assetMgr.getTexture("grass").get(),
+                assetMgr.getShader("default"),
+                assetMgr.getTexture("grass"),
                 MESH_RENDERER_MODE_DEFAULT);
         }
     }

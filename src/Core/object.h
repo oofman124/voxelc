@@ -11,21 +11,21 @@
 
 using namespace std;
 
-class Instance : public enable_shared_from_this<Instance> {
+class Object : public enable_shared_from_this<Object> {
 public:
-    shared_ptr<Instance> parentPtr;
-    weak_ptr<Instance> Parent;
+    shared_ptr<Object> parentPtr;
+    weak_ptr<Object> Parent;
 
-    string Name = "Instance";
-    string ClassName = "Instance";
+    string Name = "Object";
+    string ClassName = "Object";
 
     // Constructor
-    Instance(string name = "Instance") 
+    Object(string name = "Object") 
         : Name(name) {
     }
 
     // Rule of Five
-    virtual ~Instance() {
+    virtual ~Object() {
         // Clear parent relationship
         if (auto parentPtr = Parent.lock()) {
             auto& parentChildren = parentPtr->Children;
@@ -38,24 +38,24 @@ public:
         // Clear children (this will trigger their destructors)
         Children.clear();
     }
-    Instance(const Instance&) = delete;
-    Instance& operator=(const Instance&) = delete;
-    Instance(Instance&&) noexcept = default;
-    Instance& operator=(Instance&&) noexcept = default;
+    Object(const Object&) = delete;
+    Object& operator=(const Object&) = delete;
+    Object(Object&&) noexcept = default;
+    Object& operator=(Object&&) noexcept = default;
 
     // Children Management
-    vector<shared_ptr<Instance>> GetChildren() const {
+    vector<shared_ptr<Object>> GetChildren() const {
         return Children;
     }
 
-    shared_ptr<Instance> GetParent() const {
+    shared_ptr<Object> GetParent() const {
         return Parent.lock();
     }
 
     HierarchyMap<string, string> exportToMap() const {
         HierarchyMap<string, string> hierarchy;
         
-        // Add this instance
+        // Add this object
         hierarchy.insert(Name, ClassName);
         
         // Add children recursively
@@ -72,9 +72,9 @@ public:
     }
 
 
-    void SetParent(shared_ptr<Instance> parent) {
+    void SetParent(shared_ptr<Object> parent) {
         if (parent) {
-            // Remove this instance from the current parent's children, if any
+            // Remove this object from the current parent's children, if any
             if (auto currentParent = Parent.lock()) {
                 auto& currentChildren = currentParent->Children;
                 currentChildren.erase(
@@ -83,7 +83,7 @@ public:
                 );
             }
 
-            // Set the new parent and add this instance to its children
+            // Set the new parent and add this object to its children
             Parent = parent;
             parent->Children.push_back(shared_from_this());
         } else {
@@ -98,7 +98,7 @@ public:
             Parent.reset();
         }
     }
-    bool AddChild(shared_ptr<Instance> child) {
+    bool AddChild(shared_ptr<Object> child) {
         if (child && !child->Parent.lock()) {
             Children.push_back(child);
             child->Parent = shared_from_this();
@@ -107,13 +107,13 @@ public:
         return false;
     }
 
-    shared_ptr<Instance> operator[](const string& name) {
+    shared_ptr<Object> operator[](const string& name) {
         return FindFirstChild(name);
     }
 
-    shared_ptr<Instance> FindFirstChild(const string& name) const {
+    shared_ptr<Object> FindFirstChild(const string& name) const {
         auto it = find_if(Children.begin(), Children.end(),
-            [&name](const shared_ptr<Instance>& child) {
+            [&name](const shared_ptr<Object>& child) {
                 return child->Name == name;
             });
         return it != Children.end() ? *it : nullptr;
@@ -123,7 +123,7 @@ public:
         return FindFirstChild(name) != nullptr;
     }
 
-    bool HasInstance(const shared_ptr<Instance>& inst) const {
+    bool HasInstance(const shared_ptr<Object>& inst) const {
         return find(Children.begin(), Children.end(), inst) != Children.end();
     }
 
@@ -134,15 +134,15 @@ public:
     string GetFullName() const {
         string fullName = Name;
         auto current = GetParent();
-        while (current && current->IsA("Instance")) {
+        while (current && current->IsA("Object")) {
             fullName = current->Name + "." + fullName;
             current = current->GetParent();
         }
         return fullName;
     }
 
-    vector<shared_ptr<Instance>> GetDescendants() const {
-        vector<shared_ptr<Instance>> descendants;
+    vector<shared_ptr<Object>> GetDescendants() const {
+        vector<shared_ptr<Object>> descendants;
         for (const auto& child : Children) {
             descendants.push_back(child);
             auto childDescendants = child->GetDescendants();
@@ -165,28 +165,28 @@ protected:
     }
 
 private:
-    vector<string> AncestorClasses = {"Instance"};
-    vector<shared_ptr<Instance>> Children;
+    vector<string> AncestorClasses = {"Object"};
+    vector<shared_ptr<Object>> Children;
 };
 
-class PVInstance : public Instance {
+class PVObject : public Object {
 public:
     shared_ptr<Transform> transformPtr;
     shared_ptr<UV_MeshRenderer> meshRendererPtr;
     weak_ptr<Transform> transform;
     weak_ptr<UV_MeshRenderer> meshRenderer;
 
-    PVInstance(string name = "PVInstance")
-        : Instance(name) {
+    PVObject(string name = "PVObject")
+        : Object(name) {
         try {
-            ClassName = "PVInstance";
-            AddAncestorClass("PVInstance");
+            ClassName = "PVObject";
+            AddAncestorClass("PVObject");
 
             // First create the components
             transformPtr = make_shared<Transform>();
             if (!transformPtr) throw runtime_error("Failed to create Transform");
             
-            meshRendererPtr = make_shared<UV_MeshRenderer>(transformPtr.get());
+            meshRendererPtr = make_shared<UV_MeshRenderer>(transformPtr);
             if (!meshRendererPtr) throw runtime_error("Failed to create MeshRenderer");
             
             // Assign weak pointers

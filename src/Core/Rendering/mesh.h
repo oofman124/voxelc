@@ -9,8 +9,7 @@
 #include "vertex.h"
 
 // Mesh class to hold vertices and indices
-// This class is used to create a mesh object that can be rendered in [Graphics Engine].
-class UV_Mesh
+class UV_Mesh : public std::enable_shared_from_this<UV_Mesh>
 {
 public:
     std::vector<UV_Vertex> vertices;
@@ -25,7 +24,7 @@ public:
 
 namespace Meshes
 {
-    UV_Mesh cube{
+    inline std::shared_ptr<UV_Mesh> cube = std::make_shared<UV_Mesh>(
         std::vector<UV_Vertex>{
             // Front face
             {-0.5f, -0.5f, 0.5f, 0.0f, 0.0f}, // Bottom left
@@ -75,44 +74,47 @@ namespace Meshes
             // Top
             16, 17, 18, 18, 19, 16,
             // Bottom
-            20, 21, 22, 22, 23, 20}};
-    UV_Mesh block{
+            20, 21, 22, 22, 23, 20
+        }
+    );
+
+    inline std::shared_ptr<UV_Mesh> block = std::make_shared<UV_Mesh>(
         std::vector<UV_Vertex>{
             // Top face (gray section)
-            {-0.5f, 0.5f, -0.5f, 0.25f, 0.0f},   // Top-left
-            {0.5f, 0.5f, -0.5f, 0.5f, 0.0f},     // Top-right
-            {0.5f, 0.5f, 0.5f, 0.5f, 0.25f},     // Bottom-right
-            {-0.5f, 0.5f, 0.5f, 0.25f, 0.25f},   // Bottom-left
+            {-0.5f, 0.5f, -0.5f, 0.25f, 0.0f}, // Top-left
+            {0.5f, 0.5f, -0.5f, 0.5f, 0.0f},   // Top-right
+            {0.5f, 0.5f, 0.5f, 0.5f, 0.25f},   // Bottom-right
+            {-0.5f, 0.5f, 0.5f, 0.25f, 0.25f}, // Bottom-left
 
             // Front face (yellow gradient)
-            {-0.5f, -0.5f, 0.5f, 0.25f, 0.25f},  // Bottom-left
-            {0.5f, -0.5f, 0.5f, 0.5f, 0.25f},    // Bottom-right
-            {0.5f, 0.5f, 0.5f, 0.5f, 0.5f},      // Top-right
-            {-0.5f, 0.5f, 0.5f, 0.25f, 0.5f},    // Top-left
+            {-0.5f, -0.5f, 0.5f, 0.25f, 0.25f}, // Bottom-left
+            {0.5f, -0.5f, 0.5f, 0.5f, 0.25f},   // Bottom-right
+            {0.5f, 0.5f, 0.5f, 0.5f, 0.5f},     // Top-right
+            {-0.5f, 0.5f, 0.5f, 0.25f, 0.5f},   // Top-left
 
             // Back face (left gradient)
-            {-0.5f, -0.5f, -0.5f, 0.0f, 0.25f},  // Bottom-left
-            {0.5f, -0.5f, -0.5f, 0.25f, 0.25f},  // Bottom-right
-            {0.5f, 0.5f, -0.5f, 0.25f, 0.5f},    // Top-right
-            {-0.5f, 0.5f, -0.5f, 0.0f, 0.5f},    // Top-left
+            {-0.5f, -0.5f, -0.5f, 0.0f, 0.25f}, // Bottom-left
+            {0.5f, -0.5f, -0.5f, 0.25f, 0.25f}, // Bottom-right
+            {0.5f, 0.5f, -0.5f, 0.25f, 0.5f},   // Top-right
+            {-0.5f, 0.5f, -0.5f, 0.0f, 0.5f},   // Top-left
 
             // Left face (right gradient)
-            {-0.5f, -0.5f, -0.5f, 0.5f, 0.25f},  // Bottom-left
-            {-0.5f, -0.5f, 0.5f, 0.75f, 0.25f},  // Bottom-right
-            {-0.5f, 0.5f, 0.5f, 0.75f, 0.5f},    // Top-right
-            {-0.5f, 0.5f, -0.5f, 0.5f, 0.5f},    // Top-left
+            {-0.5f, -0.5f, -0.5f, 0.5f, 0.25f}, // Bottom-left
+            {-0.5f, -0.5f, 0.5f, 0.75f, 0.25f}, // Bottom-right
+            {-0.5f, 0.5f, 0.5f, 0.75f, 0.5f},   // Top-right
+            {-0.5f, 0.5f, -0.5f, 0.5f, 0.5f},   // Top-left
 
             // Right face (purple gradient)
-            {0.5f, -0.5f, -0.5f, 0.75f, 0.25f},  // Bottom-left
-            {0.5f, -0.5f, 0.5f, 1.0f, 0.25f},    // Bottom-right
-            {0.5f, 0.5f, 0.5f, 1.0f, 0.5f},      // Top-right
-            {0.5f, 0.5f, -0.5f, 0.75f, 0.5f},    // Top-left
+            {0.5f, -0.5f, -0.5f, 0.75f, 0.25f}, // Bottom-left
+            {0.5f, -0.5f, 0.5f, 1.0f, 0.25f},   // Bottom-right
+            {0.5f, 0.5f, 0.5f, 1.0f, 0.5f},     // Top-right
+            {0.5f, 0.5f, -0.5f, 0.75f, 0.5f},   // Top-left
 
             // Bottom face (rainbow section)
-            {-0.5f, -0.5f, -0.5f, 0.25f, 0.5f},  // Top-left
-            {0.5f, -0.5f, -0.5f, 0.5f, 0.5f},    // Top-right
-            {0.5f, -0.5f, 0.5f, 0.5f, 0.75f},    // Bottom-right
-            {-0.5f, -0.5f, 0.5f, 0.25f, 0.75f}   // Bottom-left
+            {-0.5f, -0.5f, -0.5f, 0.25f, 0.5f}, // Top-left
+            {0.5f, -0.5f, -0.5f, 0.5f, 0.5f},   // Top-right
+            {0.5f, -0.5f, 0.5f, 0.5f, 0.75f},   // Bottom-right
+            {-0.5f, -0.5f, 0.5f, 0.25f, 0.75f}  // Bottom-left
         },
         std::vector<unsigned int>{
             // Front (middle of T)
@@ -128,8 +130,7 @@ namespace Meshes
             // Bottom (bottom of T)
             20, 21, 22, 22, 23, 20
         }
-    };
-
-}
+    );
+} // <--- Close namespace
 
 #endif // MESH_H

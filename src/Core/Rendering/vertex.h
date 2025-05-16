@@ -14,10 +14,6 @@ struct UV_Vertex
     float u, v;    // Texture coordinates
 };
 
-glm::vec3 getVertexPosition(const UV_Vertex& vertex)
-{
-    return glm::vec3(vertex.x, vertex.y, vertex.z);
-}
 
 
 #endif // !VERTEX_H

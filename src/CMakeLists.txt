@@ -14,14 +14,16 @@ target_include_directories(voxelc PRIVATE
 # Add glad.c as a source file
 set(GLAD_SRC "${GLAD_ROOT}/src/glad.c")
 
+target_sources(voxelc PRIVATE 
+    "${GLAD_ROOT}/src/glad.c"
+    "Core/stb_image_impl.cpp"
+)
+
 if (WIN32)
-    target_sources(voxelc PRIVATE ${GLAD_SRC})
-    
     target_link_libraries(voxelc 
         PRIVATE
         "${GLFW_ROOT}/lib/glfw3.lib"  # Link GLFW
         opengl32                       # Link OpenGL
-        # imgui                          # Link ImGui
     )
 else()
     message(FATAL_ERROR "Unsupported platform. Linux and MacOS support coming soon!")

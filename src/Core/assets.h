@@ -51,7 +51,7 @@ public:
     // Initialize default assets
     void initializeDefaultAssets() {
         // Add your default shaders
-        //addShader("default", "resources/shaders/vertex_texture.glsl", "resources/shaders/fragment_texture.glsl");
+        addShader("default", "resources/shaders/vertex_texture.glsl", "resources/shaders/fragment_texture.glsl");
         addShader("ui", "resources/shaders/ui_vertex.glsl", "resources/shaders/ui_fragment.glsl");
         
         // Add your default textures

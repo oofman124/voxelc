@@ -4,11 +4,13 @@
 #include <glad/glad.h>
 #include <vector>
 #include "vertex.h"
+#include <tuple>
 
-class UV_VertexBuffer
+class UV_VertexBuffer: public std::enable_shared_from_this<UV_VertexBuffer>
 {
 public:
     UV_VertexBuffer(const std::vector<UV_Vertex>& vertices, const std::vector<unsigned int>& indices)
+    : vertices(vertices), indices(indices)
     {
         // Generate and bind VAO
         glGenVertexArrays(1, &VAO);
@@ -40,6 +42,7 @@ public:
     {
         // Clean up
         glBindVertexArray(0);
+        std::cout << "Deleting buffers: " << VAO << ", " << VBO << ", " << EBO << std::endl;
         glDeleteVertexArrays(1, &VAO);
         glDeleteBuffers(1, &VBO);
         glDeleteBuffers(1, &EBO);
@@ -74,8 +77,23 @@ public:
         glBufferSubData(GL_ELEMENT_ARRAY_BUFFER, 0, indices.size() * sizeof(unsigned int), indices.data());
     }
 
+    std::tuple<unsigned int, unsigned int, unsigned int> getBuffers() const
+    {
+        return std::make_tuple(VAO, VBO, EBO);
+    }
+
+    const std::vector<unsigned int>& getIndices() const
+    {
+        return indices;
+    }
+    unsigned int getIndexCount() const
+    {
+        return static_cast<unsigned int>(indices.size());
+    }
 private:
     unsigned int VAO, VBO, EBO;
+    const std::vector<UV_Vertex>& vertices;
+    const std::vector<unsigned int>& indices;
 };
 
 #endif // UV_VERTEX_BUFFER_H

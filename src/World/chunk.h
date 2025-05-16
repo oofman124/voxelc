@@ -7,14 +7,14 @@
 #include <memory>
 #include "../Core/transform.h"
 #include "../Core/Rendering/meshRenderer.h"
-#include "../Core/instance.h"
+#include "../Core/object.h"
 
-class Chunk : public Instance
+class Chunk : public Object
 {
 public:
 
     Chunk(string name = "Chunk")
-        : Instance(name)
+        : Object(name)
     {
         ClassName = "Chunk";
         AddAncestorClass("Chunk");

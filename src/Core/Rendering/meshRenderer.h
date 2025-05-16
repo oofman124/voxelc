@@ -12,6 +12,7 @@
 #include "vertexBuffer.h"
 #include "../transform.h"
 #include "vertex.h"
+#include "../Renderer/renderer.h"
 #include <memory>
 
 enum MatrixType
@@ -32,11 +33,15 @@ enum MeshRendererMode
 class UV_MeshRenderer : public std::enable_shared_from_this<UV_MeshRenderer>
 {
 public:
-    UV_MeshRenderer(const UV_Mesh &mesh, Shader *shader, Texture* texture, Transform *transform, MeshRendererMode mode = MESH_RENDERER_MODE_DEFAULT)
-        : mesh(new UV_Mesh(mesh)), shader(shader), texture(texture),
-          transform(transform), mode(mode)
+    // Constructor
+    UV_MeshRenderer(std::shared_ptr<UV_Mesh> mesh,
+                    std::shared_ptr<Shader> shader,
+                    std::shared_ptr<Texture> texture,
+                    std::shared_ptr<Transform> transform,
+                    MeshRendererMode mode = MESH_RENDERER_MODE_DEFAULT)
+        : mesh(mesh), shader(shader), texture(texture), transform(transform), mode(mode)
     {
-        if (mesh.vertices.empty() || mesh.indices.empty())
+        if (!mesh || mesh->vertices.empty() || mesh->indices.empty())
         {
             if (THROW_MESH_ERR)
                 throw std::runtime_error("Mesh must have vertices and indices");
@@ -48,29 +53,29 @@ public:
                 throw std::runtime_error("Shader or/and Transform must be valid");
             return;
         }
-
-        // Initialize vertex buffer
-        vertexBuffer = new UV_VertexBuffer(mesh.vertices, mesh.indices);
-
-        // Initialize matrices
+        vertexBuffer = std::make_shared<UV_VertexBuffer>(mesh->vertices, mesh->indices);
         viewMatrix = glm::mat4(1.0f);
         projectionMatrix = glm::mat4(1.0f);
         isInitialized = true;
     }
 
     // Default constructor
-    UV_MeshRenderer(Transform *transform)
+    UV_MeshRenderer(std::shared_ptr<Transform> transform)
         : shader(nullptr), mesh(nullptr), texture(nullptr), vertexBuffer(nullptr),
           transform(transform), mode(MESH_RENDERER_MODE_DEFAULT)
     {
-        // Initialize matrices
         viewMatrix = glm::mat4(1.0f);
         projectionMatrix = glm::mat4(1.0f);
     }
-    // Initialize method for setting up after default construction
-    bool Initialize(Transform *transform, const UV_Mesh &mesh, Shader *shader, Texture* texture, MeshRendererMode mode = MESH_RENDERER_MODE_DEFAULT)
+
+    // Initialize method
+    bool Initialize(std::shared_ptr<Transform> transform,
+                    std::shared_ptr<UV_Mesh> mesh,
+                    std::shared_ptr<Shader> shader,
+                    std::shared_ptr<Texture> texture,
+                    MeshRendererMode mode = MESH_RENDERER_MODE_DEFAULT)
     {
-        if (mesh.vertices.empty() || mesh.indices.empty())
+        if (!mesh || mesh->vertices.empty() || mesh->indices.empty())
         {
             if (THROW_MESH_ERR)
                 throw std::runtime_error("Mesh must have vertices and indices");
@@ -82,33 +87,34 @@ public:
                 throw std::runtime_error("Shader or/and Transform must be valid");
             return false;
         }
-
         this->mode = mode;
-        this->mesh = new UV_Mesh(mesh);
+        this->mesh = mesh;
         this->shader = shader;
         this->texture = texture;
         this->transform = transform;
-        this->vertexBuffer = new UV_VertexBuffer(mesh.vertices, mesh.indices);
+        this->vertexBuffer = std::make_shared<UV_VertexBuffer>(mesh->vertices, mesh->indices);
         isInitialized = true;
         return true;
     }
-
     bool getReady() const
     {
         return isInitialized;
     }
 
-    ~UV_MeshRenderer()
+    ~UV_MeshRenderer() = default;
+
+    void queueToRender(std::shared_ptr<Renderer> renderer)
     {
-        // Clean up
-        delete vertexBuffer;
-        delete mesh;
+        if (!isInitialized || !vertexBuffer)
+            return;
+        renderer->renderMesh(vertexBuffer, texture, transform);
     }
 
-    void render() {
+    void render()
+    {
         if (!isInitialized || !mesh || !texture || !vertexBuffer)
             return;
-            
+
         shader->use();
         shader->setMat4("model", transform->getMatrix());
         shader->setMat4("view", viewMatrix);
@@ -158,6 +164,8 @@ public:
             break;
         }
     }
+    void setMode(MeshRendererMode mode) { this->mode = mode; }
+    MeshRendererMode getMode() const { return mode; }
 
     std::vector<glm::vec3> getTransformedVertices()
     {
@@ -169,76 +177,52 @@ public:
         for (const auto &vertex : mesh->vertices)
         {
             // Assuming vertex.position is a glm::vec3
-            glm::vec4 transformed = modelMatrix * glm::vec4(getVertexPosition(vertex), 1.0f);
+            glm::vec4 transformed = modelMatrix * glm::vec4(glm::vec3(vertex.x, vertex.y, vertex.z), 1.0f);
             transformedVertices.push_back(glm::vec3(transformed));
         }
 
         return transformedVertices;
     }
-    void setShader(Shader *shader)
+    void setShader(std::shared_ptr<Shader> shader) { this->shader = shader; }
+    std::shared_ptr<Shader> getShader() { return shader; }
+
+    void setTexture(std::shared_ptr<Texture> newTexture) { texture = newTexture; }
+    std::shared_ptr<Texture> getTexture() { return texture; }
+
+    void setMesh(std::shared_ptr<UV_Mesh> newMesh)
     {
-        this->shader = shader;
-    }
-    Shader *getShader()
-    {
-        return shader;
-    }
-    void setTexture(Texture* newTexture)
-    {
-        // delete texture;
-        texture = newTexture;
-    }
-    Texture *getTexture()
-    {
-        return texture;
-    }
-    void setMesh(const UV_Mesh& newMesh) {
-        if (isInitialized) {
-            delete mesh;
-            mesh = new UV_Mesh(newMesh);
-            
-            // Update vertex buffer
-            if (vertexBuffer) {
-                vertexBuffer->updateVertices(newMesh.vertices);
-                vertexBuffer->updateIndices(newMesh.indices);
-            } else {
-                vertexBuffer = new UV_VertexBuffer(newMesh.vertices, newMesh.indices);
+        if (isInitialized)
+        {
+            mesh = newMesh;
+            if (vertexBuffer)
+            {
+                vertexBuffer->updateVertices(newMesh->vertices);
+                vertexBuffer->updateIndices(newMesh->indices);
+            }
+            else
+            {
+                vertexBuffer = std::make_shared<UV_VertexBuffer>(newMesh->vertices, newMesh->indices);
             }
         }
     }
+    std::shared_ptr<UV_Mesh> getMesh() { return mesh; }
 
-    UV_Mesh *getMesh()
-    {
-        return mesh;
-    }
-    void setMode(MeshRendererMode mode)
-    {
-        this->mode = mode;
-    }
-    MeshRendererMode getMode()
-    {
-        return mode;
-    }
-    void setTransform(Transform *transform)
-    {
-        this->transform = transform;
-    }
-    Transform *getTransform()
-    {
-        return transform;
-    }
+    void setTransform(std::shared_ptr<Transform> transform) { this->transform = transform; }
+    std::shared_ptr<Transform> getTransform() { return transform; }
+
+    std::shared_ptr<UV_VertexBuffer> getVertexBuffer() { return vertexBuffer; }
 
 private:
-    Transform *transform;
     glm::mat4 viewMatrix;
     glm::mat4 projectionMatrix;
 
     bool isInitialized = false;
     MeshRendererMode mode;
-    UV_Mesh *mesh;    // Changed to pointer
-    Texture *texture; // Changed to pointer
-    UV_VertexBuffer* vertexBuffer;
-    Shader *shader;
+    std::shared_ptr<Transform> transform;
+    std::shared_ptr<UV_Mesh> mesh;
+    std::shared_ptr<Texture> texture;
+    std::shared_ptr<UV_VertexBuffer> vertexBuffer;
+    std::shared_ptr<Shader> shader;
 };
 
 #endif // MESH_RENDERER_H
