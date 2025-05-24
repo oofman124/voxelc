@@ -241,6 +241,11 @@ void Renderer::renderMesh(std::shared_ptr<UV_VertexBuffer> buffer,
     {
         throw std::runtime_error("Frame not started");
     }
+    // Validate resources before queueing
+    if (!buffer || !buffer->isValid() || !texture || !transform) {
+        return;
+    }
+
 
     // Add to render batch
     RenderBatch batch{
@@ -272,7 +277,10 @@ void Renderer::endFrame()
         auto buffer = batch.buffer.lock();
         auto texture = batch.texture.lock();
         auto transform = batch.transform.lock();
-         if (!buffer || !texture || !transform) continue; // Skip if expired
+        // Skip invalid batches
+        if (!buffer || !buffer->isValid() || !texture || !transform) {
+            continue;
+        }
         if (texture)
         {
             texture->bind();

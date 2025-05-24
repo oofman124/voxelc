@@ -5,7 +5,8 @@
 #include <memory>
 #include "Rendering/shader.h"
 #include "Rendering/texture.h"
-
+#include "blockDatabase.h"
+#include "atlas.h"
 
 
 class AssetManager {
@@ -48,6 +49,23 @@ public:
         return nullptr;
     }
 
+    // Atlas management
+    std::shared_ptr<TextureAtlas> addTextureAtlas(const std::string& name, const std::shared_ptr<Texture>& texture, int tileWidth, int tileHeight) {
+        if (textureAtlases.find(name) == textureAtlases.end()) {
+            auto atlas = std::make_shared<TextureAtlas>(texture, tileWidth, tileHeight);
+            textureAtlases[name] = atlas;
+            return atlas;
+        }
+        return nullptr; // Atlas already exists
+    }
+    std::shared_ptr<TextureAtlas> getTextureAtlas(const std::string& name) {
+        auto it = textureAtlases.find(name);
+        if (it != textureAtlases.end()) {
+            return it->second;
+        }
+        return nullptr;
+    }
+
     // Initialize default assets
     void initializeDefaultAssets() {
         // Add your default shaders
@@ -57,6 +75,14 @@ public:
         // Add your default textures
         addTexture("grass", "resources/textures/grass.png");
         addTexture("block", "resources/textures/block_sample.png");
+        addTexture("terrain", "resources/textures/terrain.png");
+
+        // Add your default texture atlases
+        if (getTexture("terrain")) {
+            if (addTextureAtlas("terrain_atlas", getTexture("terrain"), 16, 16)) {
+                BlockDatabase::initialize(getTextureAtlas("terrain_atlas"));
+            }
+        }
     }
 
 private:
@@ -66,6 +92,7 @@ private:
 
     std::unordered_map<std::string, std::shared_ptr<Shader>> shaders;
     std::unordered_map<std::string, std::shared_ptr<Texture>> textures;
+    std::unordered_map<std::string, std::shared_ptr<TextureAtlas>> textureAtlases;
 };
 
 #endif

@@ -71,7 +71,12 @@
         "xtree": "cpp",
         "map": "cpp",
         "stop_token": "cpp",
-        "thread": "cpp"
+        "thread": "cpp",
+        "mutex": "cpp",
+        "deque": "cpp",
+        "queue": "cpp",
+        "ranges": "cpp",
+        "span": "cpp"
     },
     "github.copilot.enable": {
         "*": true,

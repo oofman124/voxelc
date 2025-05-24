@@ -37,12 +37,38 @@ public:
         // Unbind VAO
         glBindVertexArray(0);
     }
+    bool isValid() const {
+        GLint maxVAO = 0;
+        glGetIntegerv(GL_MAX_VERTEX_ATTRIBS, &maxVAO);
+        
+        if (VAO == 0) {
+            std::cout << "Invalid VAO: " << VAO << std::endl;
+            return false;
+        }
+        if (VBO == 0) {
+            std::cout << "Invalid VBO: " << VBO << std::endl;
+            return false;
+        }
+        if (EBO == 0) {
+            std::cout << "Invalid EBO: " << EBO << std::endl;
+            return false;
+        }
+        if (vertices.empty()) {
+            std::cout << "Empty vertices array" << std::endl;
+            return false;
+        }
+        if (indices.empty()) {
+            std::cout << "Empty indices array" << std::endl;
+            return false;
+        }
+        return true;
+    }
 
     ~UV_VertexBuffer()
     {
         // Clean up
         glBindVertexArray(0);
-        std::cout << "Deleting buffers: " << VAO << ", " << VBO << ", " << EBO << std::endl;
+        // std::cout << "Deleting buffers: " << VAO << ", " << VBO << ", " << EBO << std::endl;
         glDeleteVertexArrays(1, &VAO);
         glDeleteBuffers(1, &VBO);
         glDeleteBuffers(1, &EBO);

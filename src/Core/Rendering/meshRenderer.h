@@ -75,12 +75,14 @@ public:
                     std::shared_ptr<Texture> texture,
                     MeshRendererMode mode = MESH_RENDERER_MODE_DEFAULT)
     {
+        /*
         if (!mesh || mesh->vertices.empty() || mesh->indices.empty())
         {
             if (THROW_MESH_ERR)
                 throw std::runtime_error("Mesh must have vertices and indices");
             return false;
         }
+            */
         if (!shader || !transform)
         {
             if (THROW_MESH_ERR)
@@ -92,7 +94,8 @@ public:
         this->shader = shader;
         this->texture = texture;
         this->transform = transform;
-        this->vertexBuffer = std::make_shared<UV_VertexBuffer>(mesh->vertices, mesh->indices);
+        if (mesh)
+            this->vertexBuffer = std::make_shared<UV_VertexBuffer>(mesh->vertices, mesh->indices);
         isInitialized = true;
         return true;
     }
@@ -205,6 +208,7 @@ public:
             }
         }
     }
+
     std::shared_ptr<UV_Mesh> getMesh() { return mesh; }
 
     void setTransform(std::shared_ptr<Transform> transform) { this->transform = transform; }

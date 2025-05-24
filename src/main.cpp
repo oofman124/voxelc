@@ -14,13 +14,14 @@
 #include "Core/transform.h"
 #include "Core/object.h"
 #include "camera.h"
-#include "World/world.h"
+#include "Core/World/world.h"
 #include "Core/Math/frustrum.h"
 #include "Core/assets.h"
-#include "World/chunk.h"
+#include "Core/World/chunk.h"
 #include "Core/UI/uiRenderer.h"
 #include "Core/UI/uiRect.h"
 #include "Core/Renderer/renderer.h"
+#include "Core/blockDatabase.h"
 
 static AssetManager &assetMgr = AssetManager::getInstance();
 void framebuffer_size_callback(GLFWwindow *window, int width, int height);
@@ -31,7 +32,7 @@ void processInput(GLFWwindow *window);
 // settings
 const unsigned int SCR_WIDTH = 800;
 const unsigned int SCR_HEIGHT = 600;
-const unsigned int RENDER_DISTANCE = 20;
+const unsigned int RENDER_DISTANCE = 1000;
 // UI Renderer
 // std::shared_ptr<UIRenderer> uiRenderer = nullptr;
 std::shared_ptr<Renderer> renderer = nullptr;
@@ -40,7 +41,7 @@ std::shared_ptr<Renderer> renderer = nullptr;
 float deltaTime = 0.0f; // time between current frame and last frame
 float lastFrame = 0.0f;
 // camera
-Camera camera(glm::vec3(0.0f, 0.0f, 3.0f));
+Camera camera(glm::vec3(0.0f, 0.0f, 0.0f));
 float lastX = SCR_WIDTH / 2.0f;
 float lastY = SCR_HEIGHT / 2.0f;
 bool firstMouse = true;
@@ -85,6 +86,8 @@ int main()
     UV_MeshRenderer meshRenderer1(blockMesh, &shader, texture1, &transform1);
     */
     assetMgr.initializeDefaultAssets();
+    if (assetMgr.getTextureAtlas("terrain_atlas"))
+        BlockDatabase::initialize(assetMgr.getTextureAtlas("terrain_atlas"));
 
     // Initialize UI Renderer
     // uiRenderer = std::make_shared<UIRenderer>(SCR_WIDTH, SCR_HEIGHT);
@@ -94,9 +97,40 @@ int main()
     // Shader shader("resources/shaders/vertex_texture.glsl", "resources/shaders/fragment_texture.glsl");
     std::shared_ptr<Shader> shader = assetMgr.getShader("default");
     renderer->setShader(shader);
-    World world;
-    world.generateTerrain(32, 32);
-    auto root = world.getRoot();
+    std::shared_ptr<World> world = std::make_shared<World>();
+    auto root = world->getRoot();
+
+    std::atomic<bool> shouldStop{false};
+
+
+
+    // Generate terrain on main thread first
+    world->generateTerrain(12,12);
+    world->update();
+
+    // Start update thread
+    std::thread updateThread([&world, &shouldStop]() {
+        const double updateInterval = 1.0 / 30.0; // 30 updates per second
+        while (!shouldStop.load()) {
+            auto start = std::chrono::steady_clock::now();
+            
+            //world->update();
+            
+            auto end = std::chrono::steady_clock::now();
+            auto elapsed = std::chrono::duration<double>(end - start);
+            auto sleepTime = updateInterval - elapsed.count();
+            
+            if (sleepTime > 0) {
+                std::this_thread::sleep_for(std::chrono::duration<double>(sleepTime));
+            }
+        }
+    });
+    updateThread.detach();
+
+    // Wait for generation with timeout
+    if (!world->waitForGeneration()) {
+        std::cerr << "Terrain generation timed out!" << std::endl;
+    }
 
     // Create a colored rectangle
     // When creating colorRect
@@ -150,45 +184,16 @@ int main()
         //glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
         //glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-        glm::mat4 projection = glm::perspective(glm::radians(camera.Zoom), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 100.0f);
         glm::mat4 view = camera.GetViewMatrix();
 
-        glm::mat4 projView = projection * view;
-        // viewFrustum.update(projView);
+        auto chunks = world->getChunksInRange(camera.Position, RENDER_DISTANCE);
 
         renderer->beginFrame(view);
-
         // Find any descendants of the root object that is a PVObject and render them
-        for (const auto &child : root->GetChildren())
-        {
-            auto chunk = std::dynamic_pointer_cast<Chunk>(child);
-            if (chunk)
-            {
-                glm::vec3 position = chunk->getPosition();
-                // float squaredDistance = glm::dot(position - camera.Position, position - camera.Position);
-                float distanceMag = glm::length(position - camera.Position);
-                if (distanceMag <= RENDER_DISTANCE)
-                {
-                    for (const auto &blk : chunk->GetChildren())
-                    {
-                        auto pvInstance = std::dynamic_pointer_cast<PVObject>(blk);
-                        if (pvInstance)
-                        {
-                            auto transform = pvInstance->transform.lock();
-                            auto meshRenderer = pvInstance->meshRenderer.lock();
-                            if (meshRenderer)
-                            {
-                                if (meshRenderer->getMode() == MESH_RENDERER_MODE_DEFAULT)
-                                {
-                                    meshRenderer->setMatrix(VIEW, view);
-                                    meshRenderer->setMatrix(PROJECTION, projection);
-                                }
-                                meshRenderer->queueToRender(renderer);
-                            }
-                        }
-                    }
-                }
-            }
+        for (const auto& chunk : chunks) {
+            if (!chunk->isReady())
+                continue;
+            chunk->queueToRenderer(renderer);
         }
         renderer->endFrame();
 
@@ -205,13 +210,14 @@ int main()
     // cleanup
     try
     {
-        root.reset(); // This will also delete all children instances and their resources
+        shouldStop.store(true);
+        world.reset();
+        renderer->cleanup();
     }
     catch (const std::exception &e)
     {
         std::cerr << e.what() << std::endl;
     }
-    renderer->cleanup();
     return 0;
 }
 

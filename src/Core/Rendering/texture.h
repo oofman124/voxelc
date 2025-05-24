@@ -37,8 +37,7 @@ public:
         }
 
         // Load image, create texture and generate mipmaps
-        int width, height, nrChannels;
-        stbi_set_flip_vertically_on_load(true);
+        stbi_set_flip_vertically_on_load(false);
         unsigned char *data = nullptr;
 
         if (std::filesystem::exists(path.c_str()))
@@ -65,6 +64,7 @@ public:
             GLenum format = (nrChannels == 4) ? GL_RGBA : GL_RGB;
             glTexImage2D(GL_TEXTURE_2D, 0, format, width, height, 0, format, GL_UNSIGNED_BYTE, data);
             glGenerateMipmap(GL_TEXTURE_2D);
+            buffer.assign(data, data + (width * height * nrChannels));
         }
         else
         {
@@ -119,6 +119,12 @@ public:
             unit = GL_TEXTURE0;
         }
     }
+    std::vector<unsigned char> getBuffer() const {
+        return buffer;
+    }
+    // Get the width and height of the texture
+    int getWidth() const { return width; }
+    int getHeight() const { return height; }
 
     // Get the texture ID
     unsigned int getID() const { return textureID; }
@@ -126,6 +132,8 @@ public:
 private:
     unsigned int textureID;
     mutable GLenum unit = GL_TEXTURE0;  // Mutable since it changes in const methods
+    mutable int width, height, nrChannels;
+    std::vector<unsigned char> buffer;
 
     static GLenum getNextAvailableUnit() {
         static std::set<GLenum> usedUnits;
