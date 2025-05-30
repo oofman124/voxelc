@@ -13,13 +13,11 @@
 #include "Core/Rendering/shader.h"
 #include "Core/transform.h"
 #include "Core/object.h"
-#include "camera.h"
+#include "Core/camera.h"
 #include "Core/World/world.h"
 #include "Core/Math/frustrum.h"
 #include "Core/assets.h"
 #include "Core/World/chunk.h"
-#include "Core/UI/uiRenderer.h"
-#include "Core/UI/uiRect.h"
 #include "Core/Renderer/renderer.h"
 #include "Core/blockDatabase.h"
 
@@ -32,7 +30,7 @@ void processInput(GLFWwindow *window);
 // settings
 const unsigned int SCR_WIDTH = 800;
 const unsigned int SCR_HEIGHT = 600;
-const unsigned int RENDER_DISTANCE = 1000;
+const unsigned int RENDER_DISTANCE = 16*3;
 // UI Renderer
 // std::shared_ptr<UIRenderer> uiRenderer = nullptr;
 std::shared_ptr<Renderer> renderer = nullptr;
@@ -106,11 +104,13 @@ int main()
 
     // Generate terrain on main thread first
     world->generateTerrain(12,12);
-    world->update();
 
     // Start update thread
+    /*
     std::thread updateThread([&world, &shouldStop]() {
         const double updateInterval = 1.0 / 30.0; // 30 updates per second
+        world->generateTerrain(2,2);
+         world->update();
         while (!shouldStop.load()) {
             auto start = std::chrono::steady_clock::now();
             
@@ -126,19 +126,9 @@ int main()
         }
     });
     updateThread.detach();
+    */
 
-    // Wait for generation with timeout
-    if (!world->waitForGeneration()) {
-        std::cerr << "Terrain generation timed out!" << std::endl;
-    }
 
-    // Create a colored rectangle
-    // When creating colorRect
-    auto colorRect = std::make_unique<UIRect>();
-    colorRect->setPosition({10.0f, (float)SCR_HEIGHT - 60.0f}); // Adjust Y to start from top
-    colorRect->setSize({100.0f, 50.0f});
-    colorRect->setColor({1.0f, 0.0f, 0.0f, 1.0f}); // Red with full alpha
-    // colorRect->setTexture(texture0);
 
     // Limit to 60 FPS
     const double frameTime = 1.0 / 60.0;
@@ -183,6 +173,12 @@ int main()
         // render
         //glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
         //glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+
+
+        world->tickUpdate();
+
+
 
         glm::mat4 view = camera.GetViewMatrix();
 

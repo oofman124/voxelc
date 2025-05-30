@@ -5,7 +5,6 @@
 #include <vector>
 #include <unordered_map>
 #include <queue>
-#include <mutex>
 #include "worldGenerator.h"
 #include "../object.h"
 
@@ -27,8 +26,6 @@ public:
     }
     ~World()
     {
-        // Cleanup chunks
-        std::lock_guard<std::mutex> lock(worldMutex);
         for (auto &chunk : chunks)
         {
             chunk.second.reset();
@@ -39,7 +36,6 @@ public:
 
     void requestChunk(int gridX, int gridZ)
     {
-        std::lock_guard<std::mutex> lock(worldMutex);
         glm::ivec2 coords(gridX, gridZ);
 
         // Check if chunk already exists or is queued
@@ -54,7 +50,6 @@ public:
 
     std::shared_ptr<Chunk> getChunk(int gridX, int gridZ) const
     {
-        std::lock_guard<std::mutex> lock(worldMutex);
         auto it = chunks.find(glm::ivec2(gridX, gridZ));
         return it != chunks.end() ? it->second : nullptr;
     }
@@ -75,34 +70,29 @@ public:
         {
             for (int z = 0; z < depth; z++)
             {
-                int gridX = /*startX +*/ x;
-                int gridZ = /*startZ +*/ z;
+                int gridX = startX + x;
+                int gridZ = startZ + z;
                 coordsToRequest.emplace_back(gridX, gridZ);
             }
         }
 
-        // Now acquire lock once and process all requests
+        for (const auto &coords : coordsToRequest)
         {
-            std::lock_guard<std::mutex> lock(worldMutex);
-            for (const auto &coords : coordsToRequest)
+            if (chunks.find(coords) != chunks.end() ||
+                std::find(chunkRequests.begin(), chunkRequests.end(), coords) != chunkRequests.end())
             {
-                // Check if chunk already exists or is queued
-                if (chunks.find(coords) != chunks.end() ||
-                    std::find(chunkRequests.begin(), chunkRequests.end(), coords) != chunkRequests.end())
-                {
-                    continue;
-                }
-                chunkRequests.push_back(coords);
+                continue;
             }
-            isGenerationComplete = true;
-            generationCV.notify_all();
+            int worldX = coords.x * Chunk::CHUNK_SIZE;
+            int worldZ = coords.y * Chunk::CHUNK_SIZE;
+            auto chunk = worldGen.generateChunk(root, worldX, worldZ, Chunk::CHUNK_SIZE, Chunk::CHUNK_SIZE);
+            chunks[coords] = chunk;
+            // requestChunk(coords.x, coords.y);
         }
     }
 
     void update()
     {
-        std::unique_lock<std::mutex> lock(worldMutex);
-
         while (!chunkRequests.empty() && chunksInGeneration < maxConcurrentGeneration)
         {
             glm::ivec2 coords = chunkRequests.front();
@@ -135,16 +125,42 @@ public:
         }
     }
 
-    bool waitForGeneration(std::chrono::milliseconds timeout = std::chrono::milliseconds(5000))
+    void tickUpdate()
     {
-        std::unique_lock<std::mutex> lock(worldMutex);
-        return generationCV.wait_for(lock, timeout, [this]()
-                                     { return isGenerationComplete; });
+        if (!chunkRequests.empty() && chunksInGeneration < maxConcurrentGeneration)
+        {
+            glm::ivec2 coords = chunkRequests.front();
+            chunkRequests.pop_front();
+
+            try
+            {
+                // Convert grid coordinates to world coordinates
+                int worldX = coords.x * Chunk::CHUNK_SIZE;
+                int worldZ = coords.y * Chunk::CHUNK_SIZE;
+
+                auto chunk = worldGen.generateChunk(root, worldX, worldZ,
+                                                    Chunk::CHUNK_SIZE, Chunk::CHUNK_SIZE);
+
+                chunks[coords] = chunk;
+                chunksInGeneration++;
+                // Add this: Notify when generation complete
+                if (chunksInGeneration == 0)
+                {
+                    generationCV.notify_all();
+                }
+            }
+            catch (...)
+            {
+                // Return coords to queue on failure
+                chunksInGeneration--;
+                chunkRequests.push_front(coords);
+                throw;
+            }
+        }
     }
 
     shared_ptr<Object> getRoot() const
     {
-        std::lock_guard<std::mutex> lock(worldMutex);
         return root;
     }
 
@@ -152,7 +168,6 @@ public:
     std::vector<std::shared_ptr<Chunk>> getChunksInRange(const glm::vec3 &center, float radius)
     {
         std::vector<std::shared_ptr<Chunk>> result;
-        std::lock_guard<std::mutex> lock(worldMutex);
 
         // Convert world position to grid coordinates
         int centerGridX = static_cast<int>(std::floor(center.x / Chunk::CHUNK_SIZE));
@@ -189,7 +204,6 @@ private:
     WorldGenerator worldGen;
 
     // Chunk grid storage
-    mutable std::mutex worldMutex;
     std::unordered_map<glm::ivec2, std::shared_ptr<Chunk>, ChunkCoordHash> chunks;
     std::deque<glm::ivec2> chunkRequests;
 

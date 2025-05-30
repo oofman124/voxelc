@@ -68,7 +68,7 @@ public:
     {
         // Clean up
         glBindVertexArray(0);
-        // std::cout << "Deleting buffers: " << VAO << ", " << VBO << ", " << EBO << std::endl;
+        //std::cout << "Deleting buffers: " << VAO << ", " << VBO << ", " << EBO << std::endl;
         glDeleteVertexArrays(1, &VAO);
         glDeleteBuffers(1, &VBO);
         glDeleteBuffers(1, &EBO);

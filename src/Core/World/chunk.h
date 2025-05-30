@@ -19,6 +19,13 @@ enum class ChunkState
     GENERATING,
     READY
 };
+enum class ChunkMeshState
+{
+    OUTDATED,
+    GENERATING,
+    QUEUED,
+    READY
+};
 
 class Chunk : public Object
 {
@@ -53,7 +60,6 @@ public:
 
     void setBlock(int x, int y, int z, BlockType type)
     {
-        std::lock_guard<std::mutex> lock(chunkMutex); // RAII lock
         if (!isValidPosition(x, y, z))
             return;
 
@@ -68,7 +74,7 @@ public:
             blocks[index]->setType(type);
         }
 
-        needsMeshUpdate.store(true);
+        meshState.store(ChunkMeshState::OUTDATED);
     }
 
     BlockType getBlock(int x, int y, int z) const
@@ -82,13 +88,11 @@ public:
 
     void updateMesh()
     {
-        std::lock_guard<std::mutex> lock(chunkMutex);
-        if (!needsMeshUpdate.load())
+        if (meshState.load() != ChunkMeshState::OUTDATED)
             return;
-
+        meshState.store(ChunkMeshState::GENERATING);
         std::vector<UV_Vertex> vertices;
         std::vector<unsigned int> indices;
-
         // For each block in the chunk
         for (int x = 0; x < CHUNK_SIZE; x++)
         {
@@ -126,23 +130,31 @@ public:
         }
 
         // Create or update the mesh
-        auto mesh = std::make_shared<UV_Mesh>(vertices, indices);
-        meshRenderer->setMesh(mesh);
-
-        needsMeshUpdate.store(false);
+        mesh = std::make_shared<UV_Mesh>(vertices, indices);
+        // meshRenderer->setMesh(mesh); calls opengl functions; only call on renderer thread ):<
+        meshState.store(ChunkMeshState::QUEUED);
+        setState(ChunkState::READY);
     }
 
     void queueToRenderer(std::shared_ptr<Renderer> renderer)
     {
-        std::lock_guard<std::mutex> lock(chunkMutex);
         if (!isReady())
             return;
 
-        if (needsMeshUpdate.load())
+        if (meshState.load() == ChunkMeshState::OUTDATED)
         {
             updateMesh();
+            if (mesh)
+            {
+                meshRenderer->setMesh(mesh);
+                meshState.store(ChunkMeshState::READY);
+            }
+        } else if (meshState.load() == ChunkMeshState::QUEUED && mesh)
+        {
+            meshRenderer->setMesh(mesh);
+            meshState.store(ChunkMeshState::READY);
         }
-        if (meshRenderer)
+        if (meshRenderer && meshState.load() == ChunkMeshState::READY)
         {
             meshRenderer->queueToRender(renderer);
         }
@@ -152,15 +164,7 @@ public:
         return state.load() == ChunkState::READY;
     }
 
-    void lock()
-    {
-        chunkMutex.lock();
-    }
 
-    void unlock()
-    {
-        chunkMutex.unlock();
-    }
 
     void setState(ChunkState newState)
     {
@@ -169,7 +173,6 @@ public:
 
     void setPosition(const glm::vec3 &pos)
     {
-        std::lock_guard<std::mutex> lock(chunkMutex); // Add lock
         position = pos;
         if (transform)
         {
@@ -179,7 +182,6 @@ public:
 
     glm::vec3 getPosition() const
     {
-        std::lock_guard<std::mutex> lock(chunkMutex); // Add lock
         return position;
     }
 
@@ -195,13 +197,12 @@ private:
     {
         return (y * CHUNK_SIZE * CHUNK_SIZE) + (z * CHUNK_SIZE) + x;
     }
-
-    mutable std::mutex chunkMutex;
+    std::shared_ptr<UV_Mesh> mesh;
     std::atomic<ChunkState> state{ChunkState::UNLOADED};
+    std::atomic<ChunkMeshState> meshState{ChunkMeshState::OUTDATED};
     std::vector<std::shared_ptr<Block>> blocks;
     std::shared_ptr<UV_MeshRenderer> meshRenderer;
     std::shared_ptr<Transform> transform;
-    std::atomic<bool> needsMeshUpdate{true}; // Make atomic
     glm::vec3 position{0.0f};
 };
 

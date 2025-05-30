@@ -108,7 +108,7 @@ public:
 
     void queueToRender(std::shared_ptr<Renderer> renderer)
     {
-        if (!isInitialized || !vertexBuffer)
+        if (!isInitialized || !vertexBuffer || !mesh)
             return;
         renderer->renderMesh(vertexBuffer, texture, transform);
     }

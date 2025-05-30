@@ -19,6 +19,7 @@ target_sources(voxelc PRIVATE
     "Core/stb_image_impl.cpp"
     "Core/blockDatabase.cpp"
     "Core/block.cpp"
+    "Core/world/world.cpp"
 )
 
 if (WIN32)
