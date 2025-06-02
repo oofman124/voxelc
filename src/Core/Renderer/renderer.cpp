@@ -307,7 +307,7 @@ void Renderer::endFrame()
         }
     }
 
-    glfwSwapBuffers(window);
+    //glfwSwapBuffers(window);
     isFrameStarted = false;
 }
 

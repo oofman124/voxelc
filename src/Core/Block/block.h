@@ -5,12 +5,12 @@
 #include <memory>
 #include <array>
 #include <glm/glm.hpp>
-#include "transform.h"
-#include "Rendering/meshRenderer.h"
-#include "object.h"
-#include "Rendering/mesh.h"
-#include "Rendering/texture.h"
-#include "atlas.h"
+#include "../transform.h"
+#include "../Rendering/meshRenderer.h"
+#include "../object.h"
+#include "../Rendering/mesh.h"
+#include "../Rendering/texture.h"
+#include "../atlas.h"
 
 
 enum BlockType

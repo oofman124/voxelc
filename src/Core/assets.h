@@ -5,7 +5,7 @@
 #include <memory>
 #include "Rendering/shader.h"
 #include "Rendering/texture.h"
-#include "blockDatabase.h"
+#include "Block/blockDatabase.h"
 #include "atlas.h"
 
 
@@ -70,7 +70,7 @@ public:
     void initializeDefaultAssets() {
         // Add your default shaders
         addShader("default", "resources/shaders/vertex_texture.glsl", "resources/shaders/fragment_texture.glsl");
-        addShader("ui", "resources/shaders/ui_vertex.glsl", "resources/shaders/ui_fragment.glsl");
+        addShader("ui", "resources/shaders/vertex_2d.glsl", "resources/shaders/fragment_2d.glsl");
         
         // Add your default textures
         addTexture("grass", "resources/textures/grass.png");

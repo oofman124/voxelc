@@ -10,7 +10,7 @@
 #include "../Renderer/renderer.h"
 #include "../object.h"
 #include "../assets.h"
-#include "../block.h"
+#include "../Block/block.h"
 #include <array>
 
 enum class ChunkState

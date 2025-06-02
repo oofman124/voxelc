@@ -5,7 +5,7 @@
 #include <glm/glm.hpp>
 #include <cmath>
 #include "../object.h"
-#include "../block.h"
+#include "../Block/block.h"
 #include "../assets.h"
 #include "chunk.h"
 #include "perlinNoise.h"

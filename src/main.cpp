@@ -7,7 +7,6 @@
 #include <memory>
 #include <thread>
 
-
 #include "Core/Rendering/meshRenderer.h"
 #include "Core/Rendering/mesh.h"
 #include "Core/Rendering/shader.h"
@@ -19,7 +18,8 @@
 #include "Core/assets.h"
 #include "Core/World/chunk.h"
 #include "Core/Renderer/renderer.h"
-#include "Core/blockDatabase.h"
+#include "Core/Renderer/renderer2D.h"
+#include "Core/Block/blockDatabase.h"
 
 static AssetManager &assetMgr = AssetManager::getInstance();
 void framebuffer_size_callback(GLFWwindow *window, int width, int height);
@@ -30,10 +30,11 @@ void processInput(GLFWwindow *window);
 // settings
 const unsigned int SCR_WIDTH = 800;
 const unsigned int SCR_HEIGHT = 600;
-const unsigned int RENDER_DISTANCE = 16*3;
+const unsigned int RENDER_DISTANCE = 16 * 3;
 // UI Renderer
 // std::shared_ptr<UIRenderer> uiRenderer = nullptr;
 std::shared_ptr<Renderer> renderer = nullptr;
+std::shared_ptr<Renderer2D> uiRenderer = nullptr;
 
 // timing
 float deltaTime = 0.0f; // time between current frame and last frame
@@ -47,25 +48,22 @@ Frustum viewFrustum;
 
 bool mouseLocked = true;
 
-
-
 int main()
 {
 
     renderer = std::make_shared<Renderer>();
     renderer->initialize();
+
     GLFWwindow *window = renderer->getWindow();
     // Set up OpenGL callbacks related to input
     glfwSetCursorPosCallback(window, mouse_callback);
     glfwSetScrollCallback(window, scroll_callback);
     glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 
-
     // Set up OpenGL options
     glEnable(GL_DEPTH_TEST);
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-
 
     /* Create shader program
     Shader shader("resources/shaders/vertex_texture.glsl", "resources/shaders/fragment_texture.glsl");
@@ -88,7 +86,9 @@ int main()
         BlockDatabase::initialize(assetMgr.getTextureAtlas("terrain_atlas"));
 
     // Initialize UI Renderer
-    // uiRenderer = std::make_shared<UIRenderer>(SCR_WIDTH, SCR_HEIGHT);
+    uiRenderer = std::make_shared<Renderer2D>();
+    uiRenderer->setShader(assetMgr.getShader("ui"));
+    uiRenderer->setProjection(glm::ortho(0.0f, (float)SCR_WIDTH, (float)SCR_HEIGHT, 0.0f, -1.0f, 1.0f));
 
     std::shared_ptr<Texture> texture0 = assetMgr.getTexture("grass");
     std::shared_ptr<Texture> texture1 = assetMgr.addTexture("block", "resources/textures/block_sample.png");
@@ -100,10 +100,8 @@ int main()
 
     std::atomic<bool> shouldStop{false};
 
-
-
     // Generate terrain on main thread first
-    world->generateTerrain(12,12);
+    world->generateTerrain(12, 12);
 
     // Start update thread
     /*
@@ -113,13 +111,13 @@ int main()
          world->update();
         while (!shouldStop.load()) {
             auto start = std::chrono::steady_clock::now();
-            
+
             //world->update();
-            
+
             auto end = std::chrono::steady_clock::now();
             auto elapsed = std::chrono::duration<double>(end - start);
             auto sleepTime = updateInterval - elapsed.count();
-            
+
             if (sleepTime > 0) {
                 std::this_thread::sleep_for(std::chrono::duration<double>(sleepTime));
             }
@@ -127,8 +125,6 @@ int main()
     });
     updateThread.detach();
     */
-
-
 
     // Limit to 60 FPS
     const double frameTime = 1.0 / 60.0;
@@ -171,14 +167,10 @@ int main()
         processInput(window);
 
         // render
-        //glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
-        //glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-
+        // glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
+        // glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
         world->tickUpdate();
-
-
 
         glm::mat4 view = camera.GetViewMatrix();
 
@@ -186,14 +178,24 @@ int main()
 
         renderer->beginFrame(view);
         // Find any descendants of the root object that is a PVObject and render them
-        for (const auto& chunk : chunks) {
+        for (const auto &chunk : chunks)
+        {
             if (!chunk->isReady())
                 continue;
             chunk->queueToRenderer(renderer);
         }
         renderer->endFrame();
 
-        //glfwSwapBuffers(window);
+        glDisable(GL_DEPTH_TEST);
+        glDepthMask(GL_TRUE);
+        glDisable(GL_CULL_FACE);
+        uiRenderer->beginFrame();
+        // Render UI elements here
+        uiRenderer->drawQuad(glm::vec2(1, 1), glm::vec2(200, 200), glm::vec4(1.0f, 0.0f, 0.0f, 1.0f));
+        uiRenderer->endFrame();
+        glEnable(GL_DEPTH_TEST);
+
+        glfwSwapBuffers(window);
         glfwPollEvents();
     }
     // optional: de-allocate all resources once they've outlived their purpose:
@@ -224,7 +226,6 @@ static bool escPressedLastFrame = false;
 void processInput(GLFWwindow *window)
 {
 
-
     bool escPressedThisFrame = glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS;
 
     if (escPressedThisFrame && !escPressedLastFrame)
@@ -252,8 +253,8 @@ void framebuffer_size_callback(GLFWwindow *window, int width, int height)
     // make sure the viewport matches the new window dimensions; note that width and
     // height will be significantly larger than specified on retina displays.
     glViewport(0, 0, width, height);
-    //if (uiRenderer)
-    //    uiRenderer->SetProjection(width, height);
+    // if (uiRenderer)
+    //     uiRenderer->SetProjection(width, height);
 }
 // glfw: whenever the mouse moves, this callback is called
 // -------------------------------------------------------

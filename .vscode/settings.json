@@ -76,7 +76,8 @@
         "deque": "cpp",
         "queue": "cpp",
         "ranges": "cpp",
-        "span": "cpp"
+        "span": "cpp",
+        "condition_variable": "cpp"
     },
     "github.copilot.enable": {
         "*": true,
