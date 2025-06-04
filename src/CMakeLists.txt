@@ -18,6 +18,7 @@ target_sources(voxelc PRIVATE
     "${GLAD_ROOT}/src/glad.c"
     "Core/stb_image_impl.cpp"
     "Core/Block/blockDatabase.cpp"
+    "Core/Input/inputManager.cpp"
     "Core/Block/block.cpp"
     "Core/world/world.cpp"
 )

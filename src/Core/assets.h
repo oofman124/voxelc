@@ -32,9 +32,9 @@ public:
     }
 
     // Texture management
-    std::shared_ptr<Texture> addTexture(const std::string& name, const std::string& path) {
+    std::shared_ptr<Texture> addTexture(const std::string& name, const std::string& path, bool flip = false) {
         if (textures.find(name) == textures.end()) {
-            std::shared_ptr<Texture> tex = std::make_shared<Texture>(path);
+            std::shared_ptr<Texture> tex = std::make_shared<Texture>(path, flip);
             textures[name] = tex;
             return tex;
         }
@@ -76,6 +76,8 @@ public:
         addTexture("grass", "resources/textures/grass.png");
         addTexture("block", "resources/textures/block_sample.png");
         addTexture("terrain", "resources/textures/terrain.png");
+        addTexture("placeholder", "resources/textures/tex-placeholder.png", true);
+        addTexture("notch", "resources/textures/notch.jpg", true);
 
         // Add your default texture atlases
         if (getTexture("terrain")) {

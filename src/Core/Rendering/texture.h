@@ -18,7 +18,7 @@ class Texture : public std::enable_shared_from_this<Texture>
 {
 public:
     // Constructor that loads a texture from a file
-    Texture(const std::string &path)
+    Texture(const std::string &path, bool flip = false)
     {
         glGenTextures(1, &textureID);
         glBindTexture(GL_TEXTURE_2D, textureID);
@@ -37,7 +37,7 @@ public:
         }
 
         // Load image, create texture and generate mipmaps
-        stbi_set_flip_vertically_on_load(false);
+        stbi_set_flip_vertically_on_load(flip);
         unsigned char *data = nullptr;
 
         if (std::filesystem::exists(path.c_str()))
