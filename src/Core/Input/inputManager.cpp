@@ -139,7 +139,6 @@ InputManager::CallbackHandle<InputManager::CursorPosCallback> InputManager::onCu
 
 // GLFW Callbacks
 void InputManager::keyCallback(GLFWwindow*, int key, int, int action, int) {
-    std::cout << "Key event: " << key << " action: " << action << std::endl;
     if (action == GLFW_PRESS) {
         s_keysDown[key] = true;
         s_keysPressed[key] = true;

@@ -22,6 +22,9 @@
 #include "Core/Block/blockDatabase.h"
 #include "Core/Input/InputManager.h"
 
+
+
+
 static AssetManager &assetMgr = AssetManager::getInstance();
 void framebuffer_size_callback(GLFWwindow *window, int width, int height);
 void mouse_callback(GLFWwindow *window, double xpos, double ypos);
@@ -63,6 +66,7 @@ int main()
 
     InputManager::initialize(window);
 
+
     // Set up OpenGL options
     glEnable(GL_DEPTH_TEST);
     glEnable(GL_BLEND);
@@ -88,7 +92,7 @@ int main()
     std::atomic<bool> shouldStop{false};
 
     // Generate terrain on main thread first
-    world->generateTerrain(12, 12);
+    world->generateTerrain(8,8);
 
 
     InputManager::onKeyPressed([window](int key) {
@@ -130,7 +134,6 @@ int main()
             camera.ProcessMouseMovement(xoffset, yoffset);
         }
     });
-
 
     // Start update thread
     /*
@@ -217,13 +220,12 @@ int main()
         glDisable(GL_CULL_FACE);
         uiRenderer->beginFrame();
         // Render UI elements here
-        uiRenderer->drawQuad(glm::vec2(1, 1), glm::vec2(200, 200), assetMgr.getTexture("notch"), glm::vec4(1.0f, 1.0f, 1.0f, 1.0f));
+        uiRenderer->drawQuad(glm::vec2(0.0f, 0.0f), glm::vec2(320,320), assetMgr.getTexture("notch"), glm::vec4(1.0f, 1.0f, 1.0f, 1.0f));
         uiRenderer->endFrame();
         glEnable(GL_DEPTH_TEST);
 
         glfwSwapBuffers(window);
         glfwPollEvents();
-
         // input
         // -----
         InputManager::pollEvents();

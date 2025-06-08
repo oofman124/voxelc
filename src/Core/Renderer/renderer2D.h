@@ -7,6 +7,8 @@
 #include <vector>
 #include "../Rendering/shader.h"
 #include "../Rendering/texture.h"
+#include "../Rendering/vertexBuffer2D.h"
+#include "../Rendering/vertex2D.h"
 
 struct Quad2D {
     glm::vec2 position;
@@ -15,11 +17,6 @@ struct Quad2D {
     std::shared_ptr<Texture> texture;
 };
 
-struct Vertex2D {
-    glm::vec2 pos;
-    glm::vec2 uv;
-    glm::vec4 color;
-};
 
 class Renderer2D: public std::enable_shared_from_this<Renderer2D>
 {
@@ -42,6 +39,7 @@ private:
     std::vector<Quad2D> batch;
     std::shared_ptr<Shader> shader;
     GLuint VAO, VBO, EBO;
+    std::shared_ptr<VertexBuffer2D> vertexBuffer;
     bool initialized = false;
     glm::mat4 projection = glm::mat4(1.0f);
 };

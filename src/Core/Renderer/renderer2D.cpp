@@ -2,6 +2,10 @@
 #include <glm/gtc/matrix_transform.hpp>
 // , projection(glm::ortho(0.0f, 800.0f, 600.0f, 0.0f, -1.0f, 1.0f)
 Renderer2D::Renderer2D() : VAO(0), VBO(0), EBO(0), initialized(false) {
+
+    vertexBuffer = std::make_shared<VertexBuffer2D>(std::vector<Vertex2D>(), std::vector<unsigned int>());
+
+    /*
     glGenVertexArrays(1, &VAO);
     glGenBuffers(1, &VBO);
     glGenBuffers(1, &EBO);
@@ -22,15 +26,17 @@ Renderer2D::Renderer2D() : VAO(0), VBO(0), EBO(0), initialized(false) {
     glEnableVertexAttribArray(2);
 
     glBindVertexArray(0);
+    */
 
     initialized = true;
 }
 
 Renderer2D::~Renderer2D() {
     if (initialized) {
-        glDeleteVertexArrays(1, &VAO);
-        glDeleteBuffers(1, &VBO);
-        glDeleteBuffers(1, &EBO);
+        // glDeleteVertexArrays(1, &VAO);
+        // glDeleteBuffers(1, &VBO);
+        // glDeleteBuffers(1, &EBO);
+        vertexBuffer.reset();
     }
 }
 
@@ -68,7 +74,6 @@ void Renderer2D::flush() {
     if (!shader || batch.empty()) return;
     shader->use();
     shader->setMat4("projection", projection);
-    std::cout << "Flushing " << batch.size() << " quads\n";
 
     std::vector<Vertex2D> vertices;
     std::vector<unsigned int> indices;
@@ -96,13 +101,14 @@ void Renderer2D::flush() {
         indices.push_back(base + 0);
     }
 
-    glBindVertexArray(VAO);
+    vertexBuffer->bind();
+    vertexBuffer->updateVertices(vertices);
+    vertexBuffer->updateIndices(indices);
+    //glBindBuffer(GL_ARRAY_BUFFER, VBO);
+    //glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(Vertex2D), vertices.data(), GL_DYNAMIC_DRAW);
 
-    glBindBuffer(GL_ARRAY_BUFFER, VBO);
-    glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(Vertex2D), vertices.data(), GL_DYNAMIC_DRAW);
-
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(unsigned int), indices.data(), GL_DYNAMIC_DRAW);
+    //glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
+    //glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(unsigned int), indices.data(), GL_DYNAMIC_DRAW);
 
     size_t quadCount = batch.size();
     size_t indexOffset = 0;
@@ -119,5 +125,6 @@ void Renderer2D::flush() {
         indexOffset += 6;
     }
 
-    glBindVertexArray(0);
+    //glBindVertexArray(0);
+    vertexBuffer->unbind();
 }

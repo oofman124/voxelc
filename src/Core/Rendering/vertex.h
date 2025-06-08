@@ -1,11 +1,6 @@
 #ifndef VERTEX_H
 #define VERTEX_H
 
-#include <string>
-#include <fstream>
-#include <sstream>
-#include <iostream>
-#include <vector>
 #include <glm/gtc/matrix_transform.hpp>
 
 struct UV_Vertex

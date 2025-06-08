@@ -11,6 +11,11 @@ VoxelC is a voxel-based game engine that provides:
 - Asset management system
 - 2D/3D rendering capabilities
 
+## Note:
+**You should press ESC on startup!**
+**You should expect a white screen for a little bit before the game loads!**
+
+
 ## Structure
 ```
 voxelc/
@@ -75,6 +80,13 @@ while (!renderer->shouldClose()) {
     renderer->endFrame();
 }
 ```
+
+
+## Controls
+W,A,S,D: Move
+Right mouse button + Mouse move: Rotate camera
+ESC: Toggle Mouse Lock (rotates camera without right mouse button)
+
 
 ## Contributing
 Contributions are welcome! Please feel free to submit pull requests.

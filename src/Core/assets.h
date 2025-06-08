@@ -78,6 +78,7 @@ public:
         addTexture("terrain", "resources/textures/terrain.png");
         addTexture("placeholder", "resources/textures/tex-placeholder.png", true);
         addTexture("notch", "resources/textures/notch.jpg", true);
+        addTexture("cursor", "resources/textures/cursor.png", true);
 
         // Add your default texture atlases
         if (getTexture("terrain")) {

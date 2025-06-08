@@ -9,6 +9,7 @@ target_include_directories(voxelc PRIVATE
     "${CMAKE_SOURCE_DIR}/include"
     "${GLFW_ROOT}/include" 
     "${GLAD_ROOT}/include"
+    "${FREETYPE_ROOT}/include"
 )
 
 # Add glad.c as a source file
@@ -26,6 +27,7 @@ target_sources(voxelc PRIVATE
 if (WIN32)
     target_link_libraries(voxelc 
         PRIVATE
+        freetype
         "${GLFW_ROOT}/lib/glfw3.lib"  # Link GLFW
         opengl32                       # Link OpenGL
     )
