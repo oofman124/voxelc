@@ -11,7 +11,7 @@
 #include "texture.h"
 #include "vertexBuffer.h"
 #include "../transform.h"
-#include "vertex.h"
+#include "../Util/vertex.h"
 #include "../Renderer/renderer.h"
 #include <memory>
 

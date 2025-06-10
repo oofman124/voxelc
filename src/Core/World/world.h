@@ -7,6 +7,7 @@
 #include <queue>
 #include "worldGenerator.h"
 #include "../object.h"
+#include "../Util/AABB.h"
 
 // Chunk grid coordinate hasher
 struct ChunkCoordHash
@@ -15,6 +16,15 @@ struct ChunkCoordHash
     {
         return std::hash<int>()(k.x) ^ (std::hash<int>()(k.y) << 1);
     }
+};
+
+struct BlockRaycastHit
+{
+    glm::ivec3 blockPos;
+    BlockType blockType;
+    float distance;
+    glm::vec3 normal;
+    std::shared_ptr<Chunk> chunk;
 };
 
 class World
@@ -52,6 +62,88 @@ public:
     {
         auto it = chunks.find(glm::ivec2(gridX, gridZ));
         return it != chunks.end() ? it->second : nullptr;
+    }
+
+    inline AABB getBlockAABB(int x, int y, int z)
+    {
+        glm::vec3 min(x, y, z);
+        glm::vec3 max = min + glm::vec3(1.0f);
+        return {min, max};
+    }
+
+    bool raycast(const glm::vec3 &origin, const glm::vec3 &direction, float maxDistance, BlockRaycastHit &hitInfo)
+    {
+        glm::vec3 pos = origin;
+        glm::ivec3 blockPos = glm::floor(pos);
+        glm::vec3 rayDir = glm::normalize(direction);
+
+        glm::vec3 deltaDist = glm::abs(glm::vec3(1.0f) / rayDir);
+        glm::ivec3 step(
+            rayDir.x > 0 ? 1 : -1,
+            rayDir.y > 0 ? 1 : -1,
+            rayDir.z > 0 ? 1 : -1);
+        glm::vec3 sideDist;
+        for (int i = 0; i < 3; ++i)
+        {
+            if (rayDir[i] > 0)
+                sideDist[i] = (float(blockPos[i]) + 1.0f - pos[i]) * deltaDist[i];
+            else
+                sideDist[i] = (pos[i] - float(blockPos[i])) * deltaDist[i];
+        }
+
+        float distance = 0.0f;
+        for (int i = 0; i < int(maxDistance * 3); ++i)
+        {
+            // Find the chunk for this block
+            int chunkX = static_cast<int>(std::floor(float(blockPos.x) / Chunk::CHUNK_SIZE));
+            int chunkZ = static_cast<int>(std::floor(float(blockPos.z) / Chunk::CHUNK_SIZE));
+            auto chunk = getChunk(chunkX, chunkZ);
+            if (chunk)
+            {
+                int localX = blockPos.x - chunkX * Chunk::CHUNK_SIZE;
+                int localY = blockPos.y;
+                int localZ = blockPos.z - chunkZ * Chunk::CHUNK_SIZE;
+                BlockType type = chunk->getBlock(localX, localY, localZ);
+                if (type != BLOCK_TYPE_AIR)
+                {
+                    // Use AABB for precise intersection and normal
+                    AABB aabb = getBlockAABB(blockPos.x, blockPos.y, blockPos.z);
+                    auto result = aabb.raycast(origin, rayDir);
+                    if (result.hit && result.tNear >= 0 && result.tNear <= maxDistance)
+                    {
+                        glm::vec3 hitPoint = origin + rayDir * result.tNear;
+                        hitInfo.blockPos = blockPos;
+                        hitInfo.blockType = type;
+                        hitInfo.distance = result.tNear;
+                        hitInfo.normal = result.normal;
+                        hitInfo.chunk = chunk;
+                        return true;
+                    }
+                }
+            }
+            // Advance to next voxel
+            if (sideDist.x < sideDist.y && sideDist.x < sideDist.z)
+            {
+                blockPos.x += step.x;
+                distance = sideDist.x;
+                sideDist.x += deltaDist.x;
+            }
+            else if (sideDist.y < sideDist.z)
+            {
+                blockPos.y += step.y;
+                distance = sideDist.y;
+                sideDist.y += deltaDist.y;
+            }
+            else
+            {
+                blockPos.z += step.z;
+                distance = sideDist.z;
+                sideDist.z += deltaDist.z;
+            }
+            if (distance > maxDistance)
+                break;
+        }
+        return false;
     }
 
     void generateTerrain(int width = 10, int depth = 10)

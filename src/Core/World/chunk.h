@@ -1,6 +1,7 @@
 #ifndef CHUNK_H
 #define CHUNK_H
 
+#include <iostream>
 #include <vector>
 #include <memory>
 #include <mutex>
@@ -11,6 +12,7 @@
 #include "../object.h"
 #include "../assets.h"
 #include "../Block/block.h"
+#include "../Util/vertex.h"
 #include <array>
 
 enum class ChunkState
@@ -91,7 +93,7 @@ public:
         if (meshState.load() != ChunkMeshState::OUTDATED)
             return;
         meshState.store(ChunkMeshState::GENERATING);
-        std::vector<UV_Vertex> vertices;
+        std::vector<Vertex> vertices;
         std::vector<unsigned int> indices;
         // For each block in the chunk
         for (int x = 0; x < CHUNK_SIZE; x++)
@@ -113,7 +115,7 @@ public:
 
                     for (const auto &vertex : blockMesh->vertices)
                     {
-                        UV_Vertex v = vertex;
+                        Vertex v = vertex;
                         v.x += x;
                         v.y += y;
                         v.z += z;
@@ -129,6 +131,9 @@ public:
             }
         }
 
+        if (vertices.empty() || indices.empty()) {
+            std::cout << "Warning: Generated empty mesh for chunk at " << position.x << "," << position.y << "," << position.z << std::endl;
+        }
         // Create or update the mesh
         mesh = std::make_shared<UV_Mesh>(vertices, indices);
         // meshRenderer->setMesh(mesh); calls opengl functions; only call on renderer thread ):<

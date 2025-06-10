@@ -8,7 +8,7 @@
 #include "../Rendering/shader.h"
 #include "../Rendering/texture.h"
 #include "../Rendering/vertexBuffer2D.h"
-#include "../Rendering/vertex2D.h"
+#include "../Util/vertex.h"
 
 struct Quad2D {
     glm::vec2 position;

@@ -76,10 +76,10 @@ public:
         addTexture("grass", "resources/textures/grass.png");
         addTexture("block", "resources/textures/block_sample.png");
         addTexture("terrain", "resources/textures/terrain.png");
-        addTexture("placeholder", "resources/textures/tex-placeholder.png", true);
+        addTexture("placeholder", "resources/textures/tex-placeholder.jpg", true);
         addTexture("notch", "resources/textures/notch.jpg", true);
         addTexture("cursor", "resources/textures/cursor.png", true);
-
+        addTexture("crosshair", "resources/textures/crosshair.png", true);
         // Add your default texture atlases
         if (getTexture("terrain")) {
             if (addTextureAtlas("terrain_atlas", getTexture("terrain"), 16, 16)) {

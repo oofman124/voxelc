@@ -3,13 +3,13 @@
 
 #include <glad/glad.h>
 #include <vector>
-#include "vertex.h"
+#include "../Util/vertex.h"
 #include <tuple>
 
 class UV_VertexBuffer: public std::enable_shared_from_this<UV_VertexBuffer>
 {
 public:
-    UV_VertexBuffer(const std::vector<UV_Vertex>& vertices, const std::vector<unsigned int>& indices)
+    UV_VertexBuffer(const std::vector<Vertex> vertices, const std::vector<unsigned int> indices)
     : vertices(vertices), indices(indices)
     {
         // Generate and bind VAO
@@ -19,7 +19,7 @@ public:
         // Generate and bind VBO
         glGenBuffers(1, &VBO);
         glBindBuffer(GL_ARRAY_BUFFER, VBO);
-        glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(UV_Vertex), vertices.data(), GL_STATIC_DRAW);
+        glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(Vertex), vertices.data(), GL_STATIC_DRAW);
 
         // Generate and bind EBO
         glGenBuffers(1, &EBO);
@@ -27,11 +27,11 @@ public:
         glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(unsigned int), indices.data(), GL_STATIC_DRAW);
 
         // Position attribute
-        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(UV_Vertex), (void*)0);
+        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)0);
         glEnableVertexAttribArray(0);
 
         // Texture coord attribute
-        glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, sizeof(UV_Vertex), (void*)(3 * sizeof(float)));
+        glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)(3 * sizeof(float)));
         glEnableVertexAttribArray(1);
 
         // Unbind VAO
@@ -91,10 +91,10 @@ public:
             glBindVertexArray(0);
     }
 
-    void updateVertices(const std::vector<UV_Vertex>& vertices)
+    void updateVertices(const std::vector<Vertex>& vertices)
     {
         glBindBuffer(GL_ARRAY_BUFFER, VBO);
-        glBufferSubData(GL_ARRAY_BUFFER, 0, vertices.size() * sizeof(UV_Vertex), vertices.data());
+        glBufferSubData(GL_ARRAY_BUFFER, 0, vertices.size() * sizeof(Vertex), vertices.data());
     }
 
     void updateIndices(const std::vector<unsigned int>& indices)
@@ -118,8 +118,8 @@ public:
     }
 private:
     unsigned int VAO, VBO, EBO;
-    const std::vector<UV_Vertex>& vertices;
-    const std::vector<unsigned int>& indices;
+    std::vector<Vertex> vertices;
+    std::vector<unsigned int> indices;
 };
 
 #endif // UV_VERTEX_BUFFER_H

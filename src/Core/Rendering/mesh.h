@@ -6,16 +6,16 @@
 #include <sstream>
 #include <iostream>
 #include <vector>
-#include "vertex.h"
+#include "../Util/vertex.h"
 
 // Mesh class to hold vertices and indices
 class UV_Mesh : public std::enable_shared_from_this<UV_Mesh>
 {
 public:
-    std::vector<UV_Vertex> vertices;
+    std::vector<Vertex> vertices;
     std::vector<unsigned int> indices;
     // constructor
-    UV_Mesh(std::vector<UV_Vertex> vertices, std::vector<unsigned int> indices)
+    UV_Mesh(std::vector<Vertex> vertices, std::vector<unsigned int> indices)
     {
         this->vertices = vertices;
         this->indices = indices;
@@ -25,7 +25,7 @@ public:
 namespace Meshes
 {
     inline std::shared_ptr<UV_Mesh> cube = std::make_shared<UV_Mesh>(
-        std::vector<UV_Vertex>{
+        std::vector<Vertex>{
             // Front face
             {-0.5f, -0.5f, 0.5f, 0.0f, 0.0f}, // Bottom left
             {0.5f, -0.5f, 0.5f, 1.0f, 0.0f},  // Bottom right
@@ -79,7 +79,7 @@ namespace Meshes
     );
 
     inline std::shared_ptr<UV_Mesh> block = std::make_shared<UV_Mesh>(
-        std::vector<UV_Vertex>{
+        std::vector<Vertex>{
             // Top face (gray section)
             {-0.5f, 0.5f, -0.5f, 0.25f, 0.0f}, // Top-left
             {0.5f, 0.5f, -0.5f, 0.5f, 0.0f},   // Top-right

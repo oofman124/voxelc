@@ -106,6 +106,37 @@ int main()
             firstMouse = false;
         }
     }});
+
+    InputManager::onKeyPressed([window, world](int key) {
+        if (key == GLFW_KEY_E) {
+        if (InputManager::isMouseLocked()) {
+            BlockRaycastHit hit;
+            glm::vec3 rayOrigin = camera.Position;
+            glm::vec3 rayDir = glm::normalize(camera.Front);
+
+            // Raycast up to 12 blocks away
+            if (world->raycast(rayOrigin, rayDir, 64.0f, hit))
+            {
+                std::cout << "Hit block at: " << hit.blockPos.x << ", " << hit.blockPos.y << ", " << hit.blockPos.z << std::endl;
+                // Set the hit block to stone
+                int x = hit.blockPos.x;
+                int y = hit.blockPos.y;
+                int z = hit.blockPos.z;
+
+                // Find the chunk and set the block
+                int chunkX = static_cast<int>(std::floor(float(x) / Chunk::CHUNK_SIZE));
+                int chunkZ = static_cast<int>(std::floor(float(z) / Chunk::CHUNK_SIZE));
+                auto chunk = world->getChunk(chunkX, chunkZ);
+                if (chunk)
+                {
+                    int localX = x - chunkX * Chunk::CHUNK_SIZE;
+                    int localY = y;
+                    int localZ = z - chunkZ * Chunk::CHUNK_SIZE;
+                    chunk->setBlock(localX, localY, localZ, BLOCK_TYPE_STONE);
+                }
+            }
+        }
+    }});
     InputManager::onScroll([](double xoffset, double yoffset) {
         if (InputManager::isMouseLocked() || InputManager::isMouseButtonDown(GLFW_MOUSE_BUTTON_RIGHT)) {
             camera.ProcessMouseScroll(yoffset);
@@ -220,7 +251,8 @@ int main()
         glDisable(GL_CULL_FACE);
         uiRenderer->beginFrame();
         // Render UI elements here
-        uiRenderer->drawQuad(glm::vec2(0.0f, 0.0f), glm::vec2(320,320), assetMgr.getTexture("notch"), glm::vec4(1.0f, 1.0f, 1.0f, 1.0f));
+        // uiRenderer->drawQuad(glm::vec2(0.0f, 0.0f), glm::vec2(320,320), assetMgr.getTexture("placeholder"), glm::vec4(1.0f, 1.0f, 1.0f, 1.0f));
+        uiRenderer->drawQuad(glm::vec2((float)SCR_WIDTH/2-40, (float)SCR_HEIGHT/2-40), glm::vec2(80,80), assetMgr.getTexture("crosshair"), glm::vec4(1.0f, 1.0f, 1.0f, 1.0f));
         uiRenderer->endFrame();
         glEnable(GL_DEPTH_TEST);
 

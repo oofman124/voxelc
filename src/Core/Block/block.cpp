@@ -13,7 +13,7 @@ UV_Mesh generateBlockMeshFromAtlas(std::shared_ptr<TextureAtlas> atlas, std::arr
         return std::make_pair(uvMin, uvMax);
     };
 
-    std::vector<UV_Vertex> vertices;
+    std::vector<Vertex> vertices;
     vertices.reserve(24); // 6 faces * 4 vertices
 
     // For each face, get UVs from atlas based on tile coordinates

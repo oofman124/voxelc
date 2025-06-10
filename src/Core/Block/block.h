@@ -11,6 +11,7 @@
 #include "../Rendering/mesh.h"
 #include "../Rendering/texture.h"
 #include "../atlas.h"
+#include "../Util/vertex.h"
 
 
 enum BlockType

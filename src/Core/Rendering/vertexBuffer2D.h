@@ -6,7 +6,7 @@
 #include <tuple>
 #include <memory>
 #include <iostream>
-#include "vertex2D.h"
+#include "../Util/vertex.h"
 
 class VertexBuffer2D: public std::enable_shared_from_this<VertexBuffer2D>
 {
