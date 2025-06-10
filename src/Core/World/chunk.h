@@ -66,14 +66,23 @@ public:
             return;
 
         int index = getIndex(x, y, z);
-        if (!blocks[index])
+
+        if (type == BLOCK_TYPE_AIR)
         {
-            blocks[index] = std::make_shared<Block>("Block",
-                                                    glm::vec3(x, y, z), type);
+            // Remove the block if it exists
+            blocks[index] = nullptr;
         }
         else
         {
-            blocks[index]->setType(type);
+            if (!blocks[index])
+            {
+                blocks[index] = std::make_shared<Block>("Block",
+                                                        glm::vec3(x, y, z), type);
+            }
+            else
+            {
+                blocks[index]->setType(type);
+            }
         }
 
         meshState.store(ChunkMeshState::OUTDATED);

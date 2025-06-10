@@ -86,7 +86,8 @@ while (!renderer->shouldClose()) {
 W,A,S,D: Move
 Right mouse button + Mouse move: Rotate camera
 ESC: Toggle Mouse Lock (rotates camera without right mouse button)
-
+E: Set block to stone at crosshair
+Q: Set block to *air* at crosshair
 
 ## Contributing
 Contributions are welcome! Please feel free to submit pull requests.
