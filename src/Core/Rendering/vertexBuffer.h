@@ -91,16 +91,30 @@ public:
             glBindVertexArray(0);
     }
 
-    void updateVertices(const std::vector<Vertex>& vertices)
+    void updateVertices(const std::vector<Vertex> &newVertices)
     {
         glBindBuffer(GL_ARRAY_BUFFER, VBO);
-        glBufferSubData(GL_ARRAY_BUFFER, 0, vertices.size() * sizeof(Vertex), vertices.data());
+        if (newVertices.size() * sizeof(Vertex) != vertices.size() * sizeof(Vertex)) {
+            // Reallocate buffer if size changed
+            glBufferData(GL_ARRAY_BUFFER, newVertices.size() * sizeof(Vertex), newVertices.data(), GL_STATIC_DRAW);
+        }
+        else {
+            glBufferSubData(GL_ARRAY_BUFFER, 0, newVertices.size() * sizeof(Vertex), newVertices.data());
+        }
+        vertices = newVertices;
     }
 
-    void updateIndices(const std::vector<unsigned int>& indices)
+    void updateIndices(const std::vector<unsigned int> &newIndices)
     {
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
-        glBufferSubData(GL_ELEMENT_ARRAY_BUFFER, 0, indices.size() * sizeof(unsigned int), indices.data());
+        if (newIndices.size() * sizeof(unsigned int) != indices.size() * sizeof(unsigned int)) {
+            // Reallocate buffer if size changed
+            glBufferData(GL_ELEMENT_ARRAY_BUFFER, newIndices.size() * sizeof(unsigned int), newIndices.data(), GL_STATIC_DRAW);
+        }
+        else {
+            glBufferSubData(GL_ELEMENT_ARRAY_BUFFER, 0, newIndices.size() * sizeof(unsigned int), newIndices.data());
+        }
+        indices = newIndices;
     }
 
     std::tuple<unsigned int, unsigned int, unsigned int> getBuffers() const

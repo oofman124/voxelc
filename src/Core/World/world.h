@@ -73,75 +73,87 @@ public:
 
     bool raycast(const glm::vec3 &origin, const glm::vec3 &direction, float maxDistance, BlockRaycastHit &hitInfo)
     {
-        glm::vec3 pos = origin;
-        glm::ivec3 blockPos = glm::floor(pos);
         glm::vec3 rayDir = glm::normalize(direction);
+        glm::vec3 rayOrigin = origin;
 
-        glm::vec3 deltaDist = glm::abs(glm::vec3(1.0f) / rayDir);
-        glm::ivec3 step(
-            rayDir.x > 0 ? 1 : -1,
-            rayDir.y > 0 ? 1 : -1,
-            rayDir.z > 0 ? 1 : -1);
-        glm::vec3 sideDist;
-        for (int i = 0; i < 3; ++i)
-        {
-            if (rayDir[i] > 0)
-                sideDist[i] = (float(blockPos[i]) + 1.0f - pos[i]) * deltaDist[i];
-            else
-                sideDist[i] = (pos[i] - float(blockPos[i])) * deltaDist[i];
-        }
+        // Find starting chunk
+        glm::ivec2 chunkCoord(
+            static_cast<int>(std::floor(rayOrigin.x / Chunk::CHUNK_SIZE)),
+            static_cast<int>(std::floor(rayOrigin.z / Chunk::CHUNK_SIZE)));
 
-        float distance = 0.0f;
-        for (int i = 0; i < int(maxDistance * 3); ++i)
+        float closestT = maxDistance;
+        bool found = false;
+        SpatialRaycastResult bestResult;
+        std::shared_ptr<Chunk> bestChunk = nullptr;
+
+        // Traverse chunks along the ray
+        // Limit: up to maxDistance/chunkSize + 2 chunks (for safety)
+        int maxChunks = static_cast<int>(maxDistance / Chunk::CHUNK_SIZE) + 2;
+        glm::vec3 pos = rayOrigin;
+        float traveled = 0.0f;
+
+        for (int i = 0; i < maxChunks && traveled < maxDistance; ++i)
         {
-            // Find the chunk for this block
-            int chunkX = static_cast<int>(std::floor(float(blockPos.x) / Chunk::CHUNK_SIZE));
-            int chunkZ = static_cast<int>(std::floor(float(blockPos.z) / Chunk::CHUNK_SIZE));
-            auto chunk = getChunk(chunkX, chunkZ);
-            if (chunk)
+            // Get chunk at current position
+            glm::ivec2 currChunkCoord(
+                static_cast<int>(std::floor(pos.x / Chunk::CHUNK_SIZE)),
+                static_cast<int>(std::floor(pos.z / Chunk::CHUNK_SIZE)));
+            auto chunk = getChunk(currChunkCoord.x, currChunkCoord.y);
+            if (chunk && chunk->isReady())
             {
-                int localX = blockPos.x - chunkX * Chunk::CHUNK_SIZE;
-                int localY = blockPos.y;
-                int localZ = blockPos.z - chunkZ * Chunk::CHUNK_SIZE;
-                BlockType type = chunk->getBlock(localX, localY, localZ);
-                if (type != BLOCK_TYPE_AIR)
+                auto spatialMesh = chunk->getSpatialMesh();
+                if (spatialMesh)
                 {
-                    // Use AABB for precise intersection and normal
-                    AABB aabb = getBlockAABB(blockPos.x, blockPos.y, blockPos.z);
-                    auto result = aabb.raycast(origin, rayDir);
-                    if (result.hit && result.tNear >= 0 && result.tNear <= maxDistance)
+                    SpatialRaycastResult result;
+                    if (spatialMesh->raycastWorld(rayOrigin, rayDir, result) && result.t >= 0 && result.t < closestT)
                     {
-                        glm::vec3 hitPoint = origin + rayDir * result.tNear;
-                        hitInfo.blockPos = blockPos;
-                        hitInfo.blockType = type;
-                        hitInfo.distance = result.tNear;
-                        hitInfo.normal = result.normal;
-                        hitInfo.chunk = chunk;
-                        return true;
+                        closestT = result.t;
+                        bestResult = result;
+                        bestChunk = chunk;
+                        found = true;
                     }
                 }
             }
-            // Advance to next voxel
-            if (sideDist.x < sideDist.y && sideDist.x < sideDist.z)
+
+            // Step to next chunk boundary along the ray
+            glm::vec3 chunkMin = glm::vec3(currChunkCoord.x * Chunk::CHUNK_SIZE, -FLT_MAX, currChunkCoord.y * Chunk::CHUNK_SIZE);
+            glm::vec3 chunkMax = chunkMin + glm::vec3(Chunk::CHUNK_SIZE, FLT_MAX, Chunk::CHUNK_SIZE);
+
+            // Ray-AABB intersection to find exit point
+            AABB chunkAABB{chunkMin, chunkMax};
+            auto aabbResult = chunkAABB.raycast(pos, rayDir);
+            if (!aabbResult.hit || aabbResult.tFar <= 0)
+                break; // Ray leaves world
+
+            float stepDist = std::max(aabbResult.tFar, 0.01f);
+            pos = pos + rayDir * (stepDist + 0.001f); // Step just past the boundary
+            traveled = glm::length(pos - rayOrigin);
+        }
+
+        if (found)
+        {
+            glm::vec3 hitPoint = rayOrigin + rayDir * bestResult.t;
+            glm::ivec3 hitBlock = glm::floor(hitPoint);
+
+            hitInfo.blockPos = hitBlock;
+            int chunkX = static_cast<int>(std::floor(float(hitBlock.x) / Chunk::CHUNK_SIZE));
+            int chunkZ = static_cast<int>(std::floor(float(hitBlock.z) / Chunk::CHUNK_SIZE));
+            auto chunk = getChunk(chunkX, chunkZ);
+            if (chunk)
             {
-                blockPos.x += step.x;
-                distance = sideDist.x;
-                sideDist.x += deltaDist.x;
-            }
-            else if (sideDist.y < sideDist.z)
-            {
-                blockPos.y += step.y;
-                distance = sideDist.y;
-                sideDist.y += deltaDist.y;
+                hitInfo.blockType = chunk->getBlock(
+                    hitBlock.x - chunkX * Chunk::CHUNK_SIZE,
+                    hitBlock.y,
+                    hitBlock.z - chunkZ * Chunk::CHUNK_SIZE);
             }
             else
             {
-                blockPos.z += step.z;
-                distance = sideDist.z;
-                sideDist.z += deltaDist.z;
+                hitInfo.blockType = BLOCK_TYPE_AIR;
             }
-            if (distance > maxDistance)
-                break;
+            hitInfo.distance = bestResult.t;
+            hitInfo.normal = bestResult.normal;
+            hitInfo.chunk = chunk;
+            return true;
         }
         return false;
     }

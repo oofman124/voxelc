@@ -13,6 +13,7 @@
 #include "../assets.h"
 #include "../Block/block.h"
 #include "../Util/vertex.h"
+#include "../Util/spatialMesh.h"
 #include <array>
 
 enum class ChunkState
@@ -146,6 +147,14 @@ public:
         // Create or update the mesh
         mesh = std::make_shared<UV_Mesh>(vertices, indices);
         // meshRenderer->setMesh(mesh); calls opengl functions; only call on renderer thread ):<
+
+        // Update or create the spatial mesh
+        if (!spatialMesh)
+            spatialMesh = std::make_shared<SpatialMesh>();
+        spatialMesh->loadFromMesh(*mesh, transform);
+        // Optionally, for blocky chunks:
+        spatialMesh->calculateBlockAABBs(1.0f); // 1.0f if blocks are 1x1x1
+
         meshState.store(ChunkMeshState::QUEUED);
         setState(ChunkState::READY);
     }
@@ -199,6 +208,8 @@ public:
         return position;
     }
 
+    std::shared_ptr<SpatialMesh> getSpatialMesh() const { return spatialMesh; }
+
 private:
     bool isValidPosition(int x, int y, int z) const
     {
@@ -211,6 +222,7 @@ private:
     {
         return (y * CHUNK_SIZE * CHUNK_SIZE) + (z * CHUNK_SIZE) + x;
     }
+    std::shared_ptr<SpatialMesh> spatialMesh; // Add this line
     std::shared_ptr<UV_Mesh> mesh;
     std::atomic<ChunkState> state{ChunkState::UNLOADED};
     std::atomic<ChunkMeshState> meshState{ChunkMeshState::OUTDATED};

@@ -34,7 +34,7 @@ void processInput(GLFWwindow *window);
 // settings
 const unsigned int SCR_WIDTH = 800;
 const unsigned int SCR_HEIGHT = 600;
-const unsigned int RENDER_DISTANCE = 16 * 3;
+const unsigned int RENDER_DISTANCE = 16 * 16;
 // UI Renderer
 // std::shared_ptr<UIRenderer> uiRenderer = nullptr;
 std::shared_ptr<Renderer> renderer = nullptr;
@@ -117,7 +117,7 @@ int main()
             // Raycast up to 12 blocks away
             if (world->raycast(rayOrigin, rayDir, 64.0f, hit))
             {
-                std::cout << "Hit block at: " << hit.blockPos.x << ", " << hit.blockPos.y << ", " << hit.blockPos.z << std::endl;
+                std::cout << "Replace block at: " << hit.blockPos.x << ", " << hit.blockPos.y << ", " << hit.blockPos.z << std::endl;
                 // Set the hit block to stone
                 int x = hit.blockPos.x;
                 int y = hit.blockPos.y;
@@ -157,6 +157,7 @@ int main()
                 int chunkX = static_cast<int>(std::floor(float(x) / Chunk::CHUNK_SIZE));
                 int chunkZ = static_cast<int>(std::floor(float(z) / Chunk::CHUNK_SIZE));
                 auto chunk = world->getChunk(chunkX, chunkZ);
+                
                 if (chunk)
                 {
                     int localX = x - chunkX * Chunk::CHUNK_SIZE;
@@ -167,6 +168,39 @@ int main()
             }
         }
     }});
+
+    InputManager::onKeyPressed([window, world](int key) {
+        if (key == GLFW_KEY_Q) {
+        if (InputManager::isMouseLocked()) {
+            BlockRaycastHit hit;
+            glm::vec3 rayOrigin = camera.Position;
+            glm::vec3 rayDir = glm::normalize(camera.Front);
+
+            // Raycast up to 12 blocks away
+            if (world->raycast(rayOrigin, rayDir, 64.0f, hit))
+            {
+                std::cout << "Destroy block at: " << hit.blockPos.x << ", " << hit.blockPos.y << ", " << hit.blockPos.z << std::endl;
+                // Set the hit block to stone
+                int x = hit.blockPos.x;
+                int y = hit.blockPos.y;
+                int z = hit.blockPos.z;
+
+                // Find the chunk and set the block
+                int chunkX = static_cast<int>(std::floor(float(x) / Chunk::CHUNK_SIZE));
+                int chunkZ = static_cast<int>(std::floor(float(z) / Chunk::CHUNK_SIZE));
+                auto chunk = world->getChunk(chunkX, chunkZ);
+                if (chunk)
+                {
+                    int localX = x - chunkX * Chunk::CHUNK_SIZE;
+                    int localY = y;
+                    int localZ = z - chunkZ * Chunk::CHUNK_SIZE;
+                    chunk->setBlock(localX, localY, localZ, BLOCK_TYPE_AIR);
+                }
+            }
+        }
+    }});
+
+
     InputManager::onScroll([](double xoffset, double yoffset) {
         if (InputManager::isMouseLocked() || InputManager::isMouseButtonDown(GLFW_MOUSE_BUTTON_RIGHT)) {
             camera.ProcessMouseScroll(yoffset);
@@ -196,16 +230,13 @@ int main()
         }
     });
 
-    // Start update thread
-    /*
+    /* Start update thread [EXPIRIMENTAL]
     std::thread updateThread([&world, &shouldStop]() {
         const double updateInterval = 1.0 / 30.0; // 30 updates per second
-        world->generateTerrain(2,2);
-         world->update();
         while (!shouldStop.load()) {
             auto start = std::chrono::steady_clock::now();
 
-            //world->update();
+            world->tickUpdate();
 
             auto end = std::chrono::steady_clock::now();
             auto elapsed = std::chrono::duration<double>(end - start);
